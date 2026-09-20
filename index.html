@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1216">
+<meta name="description" content="Keep a FIBA basketball scoresheet on any device, offline, and export it as a PDF.">
+<title>FIBA Scoresheet</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <h1 id="title">FIBA Scoresheet<div class="sub" id="subtitle">New game</div></h1>
+    <button class="btn sm ghost" id="btn-games">Games</button>
+  </div>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-setup" aria-selected="true">Setup</button>
+    <button role="tab" id="tab-live" aria-selected="false">Live</button>
+    <button role="tab" id="tab-sheet" aria-selected="false">Sheet</button>
+  </div>
+  <main id="view"></main>
+</div>
+
+<!-- Confirm dialog for entries that break a rule -->
+<dialog id="dlg-confirm">
+  <h3 id="confirm-title">Check this entry</h3>
+  <div class="warnlist" id="confirm-warnings"></div>
+  <p class="hint" id="confirm-body"></p>
+  <div class="actions">
+    <button class="btn ghost" id="confirm-cancel">Cancel</button>
+    <button class="btn primary" id="confirm-ok">Record anyway</button>
+  </div>
+</dialog>
+
+<!-- Foul entry -->
+<dialog id="dlg-foul">
+  <h3 id="foul-title">Foul</h3>
+  <p class="hint" style="margin-top:0">Type</p>
+  <div class="choice" id="foul-types"></div>
+  <p class="hint">Free throws awarded</p>
+  <div class="choice" id="foul-ft"></div>
+  <div class="actions">
+    <button class="btn ghost" id="foul-cancel">Cancel</button>
+    <button class="btn primary" id="foul-ok">Record</button>
+  </div>
+</dialog>
+
+<!-- Saved games -->
+<dialog id="dlg-games">
+  <h3>Saved games</h3>
+  <div id="games-list"></div>
+  <div class="actions">
+    <button class="btn ghost" id="games-import">Import JSON</button>
+    <button class="btn primary" id="games-close">Close</button>
+  </div>
+</dialog>
+
+<input type="file" id="file-import" accept="application/json,.json" class="hidden">
+
+<!-- The printable scoresheet is rendered here on demand -->
+<div id="print-root" aria-hidden="true"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

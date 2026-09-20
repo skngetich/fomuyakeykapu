@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Scoresheet">
+  <rect width="512" height="512" rx="96" fill="#0f1216"/>
+  <rect x="112" y="80" width="288" height="352" rx="16" fill="#f5f2ec"/>
+  <g stroke="#0f1216" stroke-width="12" stroke-linecap="round">
+    <path d="M152 148h120M152 196h120M152 244h120"/>
+  </g>
+  <g fill="#ff7a1a">
+    <rect x="300" y="132" width="64" height="32" rx="8"/>
+    <rect x="300" y="180" width="64" height="32" rx="8"/>
+    <rect x="300" y="228" width="64" height="32" rx="8"/>
+  </g>
+  <circle cx="256" cy="348" r="56" fill="#ff7a1a"/>
+  <g stroke="#0f1216" stroke-width="9" fill="none">
+    <circle cx="256" cy="348" r="56"/>
+    <path d="M200 348h112M256 292v112M214 310c26 22 26 54 0 76M298 310c-26 22-26 54 0 76"/>
+  </g>
+</svg>
