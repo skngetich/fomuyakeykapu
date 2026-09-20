@@ -1,0 +1,35 @@
+{
+  "hosting": {
+    "public": "_site",
+    "ignore": ["**/.*", "**/node_modules/**"],
+    "comment": "cleanUrls must stay off: it 301s /index.html to /, and sw.js precaches index.html. cache.addAll rejects a redirected response, so the service worker would fail to install and offline support would break silently.",
+    "headers": [
+      {
+        "comment": "Nothing here is content-hashed, so the browser must revalidate the app shell rather than serve a stale copy for an hour. Offline still works: the service worker serves its cache first and refreshes behind it. The bare '/' needs its own rule because it has no extension to match.",
+        "source": "/",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
+        "source": "**/*.@(html|js|css|webmanifest)",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
+        "comment": "sw.js decides when every other file updates, so it must never be served stale.",
+        "source": "/sw.js",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
+        "comment": "Icons change only when the app is rebranded.",
+        "source": "**/icons/**",
+        "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+      },
+      {
+        "source": "**",
+        "headers": [
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "Referrer-Policy", "value": "same-origin" }
+        ]
+      }
+    ]
+  }
+}

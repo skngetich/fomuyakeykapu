@@ -28,16 +28,9 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run build:css
-
-      # Assemble only what the browser needs, so node_modules, sources and
-      # tests are not published alongside the app.
-      - name: Assemble the site
-        run: |
-          mkdir -p _site
-          cp index.html app.js model.js sheet.js styles.css sw.js manifest.webmanifest _site/
-          cp -r icons _site/
-          ls -R _site
+      # Builds the CSS and assembles _site with only the browser-facing files,
+      # the same way the Firebase deploy does.
+      - run: npm run build
 
       # Pages must already be enabled with "GitHub Actions" as its source. The
       # action's enablement: true cannot do it: creating a Pages site needs

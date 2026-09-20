@@ -10,7 +10,10 @@
     "watch:css": "tailwindcss -i src/input.css -o styles.css --watch",
     "serve": "python -m http.server 5173",
     "dev": "npm run watch:css",
-    "test": "node --test \"test/**/*.test.js\""
+    "test": "node --test \"test/**/*.test.js\"",
+    "build:site": "node scripts/build-site.mjs",
+    "build": "npm run build:css && npm run build:site",
+    "deploy": "npm run build && firebase deploy --only hosting"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.3",

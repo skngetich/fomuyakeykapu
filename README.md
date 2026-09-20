@@ -25,7 +25,18 @@ required to change the styling.
 
 ## CI and deployment
 
-Two workflows in [`.github/workflows`](.github/workflows):
+The app is deployed to two hosts, both from `main`:
+
+| | |
+| --- | --- |
+| Firebase Hosting | <https://fiba-scoresheet-app.web.app> |
+| GitHub Pages | <https://skngetich.github.io/fomuyakeykapu/> |
+
+Both publish `_site/`, assembled by [`scripts/build-site.mjs`](scripts/build-site.mjs) via
+`npm run build`, so there is one definition of what ships and `node_modules`, `src/` and
+`test/` are never published.
+
+Three workflows in [`.github/workflows`](.github/workflows):
 
 **`ci.yml`** runs on every push to `main` and every pull request:
 
@@ -37,8 +48,34 @@ Two workflows in [`.github/workflows`](.github/workflows):
 - checks every file `sw.js` promises to precache actually exists — a missing one makes the
   service worker install reject, which silently breaks offline use.
 
-**`pages.yml`** publishes to GitHub Pages on push to `main`. It copies just the browser-facing
-files into `_site/`, so `node_modules`, sources and tests are not published.
+**`pages.yml`** publishes to GitHub Pages on push to `main`.
+
+**`firebase.yml`** publishes to Firebase Hosting on push to `main`. It needs a
+`FIREBASE_SERVICE_ACCOUNT` repository secret; without it the job skips with a notice instead
+of failing. To create the credential and store it:
+
+```bash
+gcloud iam service-accounts keys create sa-key.json \
+  --iam-account=github-deploy@fiba-scoresheet-app.iam.gserviceaccount.com \
+  --project=fiba-scoresheet-app
+gh secret set FIREBASE_SERVICE_ACCOUNT --repo skngetich/fomuyakeykapu < sa-key.json
+rm sa-key.json
+```
+
+The `github-deploy` service account already exists and holds only `firebasehosting.admin` and
+`serviceusage.serviceUsageConsumer`. Delete the local JSON once the secret is set — it is a
+long-lived credential, and it must never be committed.
+
+You can also deploy by hand at any time with `npm run deploy`.
+
+### Hosting configuration
+
+[`firebase.json`](firebase.json) is deliberately not using `cleanUrls`. It would 301
+`/index.html` to `/`, and `sw.js` precaches `index.html`; `cache.addAll` rejects a redirected
+response, so the service worker would fail to install and offline support would break with no
+visible error. Nothing is content-hashed either, so the HTML, JS, CSS and manifest are served
+`no-cache` (revalidate, not "do not store") and only the icons get a long max-age. Offline is
+unaffected — the service worker answers from its cache first and refreshes behind it.
 
 It is live at **<https://skngetich.github.io/fomuyakeykapu/>**, and **the published site is
 publicly readable** — worth remembering before merging anything you would not want served.
