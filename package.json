@@ -2,13 +2,15 @@
   "name": "fiba-scoresheet",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Offline-first PWA for keeping a FIBA basketball scoresheet and exporting it as a PDF.",
   "license": "MIT",
   "scripts": {
     "build:css": "tailwindcss -i src/input.css -o styles.css --minify",
     "watch:css": "tailwindcss -i src/input.css -o styles.css --watch",
     "serve": "python -m http.server 5173",
-    "dev": "npm run watch:css"
+    "dev": "npm run watch:css",
+    "test": "node --test \"test/**/*.test.js\""
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.3",

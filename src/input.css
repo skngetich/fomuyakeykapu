@@ -1,4 +1,7 @@
-@import "tailwindcss";
+/* source(none) turns off automatic file detection: the class list comes only from
+   the three files below. Without it Tailwind also scans tests, workflows and the
+   README, so unrelated edits would churn the committed styles.css. */
+@import "tailwindcss" source(none);
 
 @source "../index.html";
 @source "../app.js";

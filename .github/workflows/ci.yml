@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Scoring and foul rules
+        run: npm test
+
+      - name: Rebuild the stylesheet
+        run: npm run build:css
+
+      # styles.css is committed so the site deploys without a build. If it no
+      # longer matches src/input.css, someone edited the input and forgot to
+      # rebuild, and the deployed styles would silently lag behind.
+      - name: Check styles.css is up to date
+        run: |
+          if ! git diff --quiet -- styles.css; then
+            echo "::error file=styles.css::styles.css does not match src/input.css. Run 'npm run build:css' and commit the result."
+            git diff --stat -- styles.css
+            exit 1
+          fi
+
+      - name: Check the app shell is cacheable
+        run: |
+          # Every file sw.js promises to precache must actually exist, or the
+          # service worker install rejects and the app stops working offline.
+          node --input-type=module -e "
+            import { readFile, access } from 'node:fs/promises';
+            const src = await readFile('sw.js', 'utf8');
+            const list = src.match(/const ASSETS = \[([\s\S]*?)\];/)[1];
+            const files = [...list.matchAll(/'([^']+)'/g)].map((m) => m[1]).filter((f) => f !== './');
+            const missing = [];
+            for (const f of files) {
+              try { await access(f); } catch { missing.push(f); }
+            }
+            if (missing.length) {
+              console.error('Precached but missing from the repo: ' + missing.join(', '));
+              process.exit(1);
+            }
+            console.log('All ' + files.length + ' precached assets present.');
+          "
