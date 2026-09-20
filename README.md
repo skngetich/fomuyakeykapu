@@ -40,10 +40,20 @@ Two workflows in [`.github/workflows`](.github/workflows):
 **`pages.yml`** publishes to GitHub Pages on push to `main`. It copies just the browser-facing
 files into `_site/`, so `node_modules`, sources and tests are not published.
 
-The workflow passes `enablement: true`, so it switches Pages on for the repository itself the
-first time it runs. **The published site is publicly readable** — check that before merging
-anything you would not want served. To stop publishing, delete `pages.yml` and turn Pages off
-under **Settings → Pages**.
+It is live at **<https://skngetich.github.io/fomuyakeykapu/>**, and **the published site is
+publicly readable** — worth remembering before merging anything you would not want served.
+To stop publishing, delete `pages.yml` and turn Pages off under **Settings → Pages**.
+
+Pages is already enabled on this repository. On a fork or a fresh clone the deploy fails until
+it is enabled, either under **Settings → Pages** with **Source: GitHub Actions**, or with:
+
+```bash
+gh api -X POST repos/OWNER/REPO/pages -f build_type=workflow
+```
+
+The `configure-pages` action has an `enablement: true` option for this, but it does not work
+with the default workflow token: creating a Pages site needs admin rights that `GITHUB_TOKEN`
+is not granted.
 
 The app uses only relative paths, so it works from a project subpath such as
 `https://<user>.github.io/fomuyakeykapu/` — no base-URL configuration needed.
