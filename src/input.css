@@ -1,0 +1,344 @@
+@import "tailwindcss";
+
+@source "../index.html";
+@source "../app.js";
+@source "../sheet.js";
+
+/* Theme is chosen by the app, not only by the OS, so the dark variant keys off a
+   class on <html> that app.js sets from the saved preference. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+   Design tokens. Every colour the app uses is named once here and redefined for
+   dark mode below, so a new theme means editing this block and nothing else.
+   The printed scoresheet deliberately does NOT use these — it is black ink on
+   white paper in either theme.
+   --------------------------------------------------------------------------- */
+:root {
+  --app-bg: #f4f6f9;
+  --app-surface: #ffffff;
+  --app-surface-2: #eef1f6;
+  --app-line: #d3dae4;
+  --app-text: #16202c;
+  --app-muted: #5c6b7e;
+  --app-accent: #ea6a0a;
+  --app-accent-fg: #1a0f05;
+  --app-info: #1d5fd0;
+  --app-info-fg: #ffffff;
+  --app-danger: #c7303a;
+  --app-danger-text: #a3222b;
+  --app-danger-surface: #fdeaec;
+  --app-ok: #1d7a53;
+  --app-shadow: 0 6px 24px rgb(22 32 44 / 0.16);
+}
+
+.dark {
+  --app-bg: #0f1216;
+  --app-surface: #171c23;
+  --app-surface-2: #1e242d;
+  --app-line: #2b323d;
+  --app-text: #e8ecf1;
+  --app-muted: #9aa5b4;
+  --app-accent: #ff7a1a;
+  --app-accent-fg: #12161c;
+  --app-info: #2f6fe0;
+  --app-info-fg: #ffffff;
+  --app-danger: #e2444b;
+  --app-danger-text: #ff9a9e;
+  --app-danger-surface: #3a1f22;
+  --app-ok: #34b37a;
+  --app-shadow: 0 6px 24px rgb(0 0 0 / 0.5);
+}
+
+@theme inline {
+  --color-bg: var(--app-bg);
+  --color-surface: var(--app-surface);
+  --color-surface-2: var(--app-surface-2);
+  --color-line: var(--app-line);
+  --color-text: var(--app-text);
+  --color-muted: var(--app-muted);
+  --color-accent: var(--app-accent);
+  --color-accent-fg: var(--app-accent-fg);
+  --color-info: var(--app-info);
+  --color-info-fg: var(--app-info-fg);
+  --color-danger: var(--app-danger);
+  --color-danger-text: var(--app-danger-text);
+  --color-danger-surface: var(--app-danger-surface);
+  --color-ok: var(--app-ok);
+
+  /* Minimum comfortable touch target for a scorer tapping at speed. */
+  --spacing-tap: 2.75rem;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  html,
+  body {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.4;
+    overscroll-behavior-y: contain;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Form controls are generated in template strings, so they are styled by
+     element rather than by class to keep the markup readable. */
+  input[type="text"],
+  input[type="date"],
+  input[type="time"],
+  input[type="number"],
+  select {
+    min-height: var(--spacing-tap);
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-line);
+    background-color: var(--color-surface-2);
+    padding: 0.5rem 0.625rem;
+    color: inherit;
+    font: inherit;
+  }
+  input[type="checkbox"] {
+    width: 1.375rem;
+    height: 1.375rem;
+    accent-color: var(--color-accent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-info);
+    outline-offset: 1px;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex min-h-tap cursor-pointer items-center justify-center gap-2
+      rounded-[10px] border border-line bg-surface-2 px-3.5 py-2.5 text-center
+      active:translate-y-px disabled:cursor-not-allowed disabled:opacity-45;
+  }
+  .btn-primary {
+    @apply border-accent bg-accent font-semibold text-accent-fg;
+  }
+  .btn-ghost {
+    @apply bg-transparent;
+  }
+  .btn-danger {
+    @apply border-danger text-danger-text;
+  }
+  .btn-sm {
+    @apply min-h-[34px] px-2.5 py-1.5 text-[13px];
+  }
+
+  .card {
+    @apply mb-3 rounded-[10px] border border-line bg-surface p-3;
+  }
+  .card-title {
+    @apply mb-2.5 text-sm font-normal tracking-wider text-muted uppercase;
+  }
+
+  .field {
+    @apply flex flex-col gap-1 text-xs text-muted;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line
+      bg-surface-2 px-2.5 py-1 text-xs;
+  }
+  .pill-warn {
+    @apply border-danger text-danger-text;
+  }
+
+  /* Segmented controls: the main tabs and the A/B team switch. */
+  .seg {
+    @apply min-h-tap flex-1 cursor-pointer rounded-[10px] border border-line bg-surface-2 p-2;
+  }
+  .seg[aria-selected="true"] {
+    @apply border-accent bg-accent font-semibold text-accent-fg;
+  }
+  .seg-info[aria-selected="true"] {
+    @apply border-info bg-info font-semibold text-info-fg;
+  }
+
+  .pcard {
+    @apply rounded-[10px] border border-line bg-surface-2 p-2;
+  }
+  .pcard-out {
+    @apply opacity-50;
+  }
+  .pcard-act {
+    @apply min-h-[36px] cursor-pointer rounded-lg border border-line bg-surface
+      text-[13px] font-semibold active:translate-y-px;
+  }
+
+  .log-row {
+    @apply flex items-center gap-2 border-b border-line px-1 py-1.5 text-[13px];
+  }
+
+  .modal {
+    @apply w-[min(420px,calc(100vw-2rem))] rounded-2xl border border-line
+      bg-surface p-4 text-text;
+  }
+  .modal::backdrop {
+    background: rgb(0 0 0 / 0.6);
+  }
+  .modal-warn {
+    @apply rounded-lg border border-danger bg-danger-surface px-2.5 py-2 text-[13px]
+      text-danger-text;
+  }
+  .choice-btn {
+    @apply min-h-tap cursor-pointer rounded-lg border border-line bg-surface-2;
+  }
+  .choice-btn[aria-pressed="true"] {
+    @apply border-accent bg-accent font-semibold text-accent-fg;
+  }
+
+  .toast {
+    @apply fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-1/2 z-60
+      -translate-x-1/2 rounded-full border border-line bg-surface-2 px-4 py-2.5 text-[13px];
+    box-shadow: var(--app-shadow);
+  }
+
+  /* The roster is a dense 12-row grid, so its inputs run tighter than the rest. */
+  .roster input[type="text"] {
+    @apply min-h-[38px] px-2 py-1.5;
+  }
+
+  /* Neutral mat behind the paper preview, in both themes. */
+  .preview-wrap {
+    @apply overflow-auto rounded-[10px] p-2.5;
+    background: #555c66;
+  }
+}
+
+/* =========================================================
+   THE SCORESHEET
+   Shared by the on-screen preview and the printed page. Deliberately plain CSS
+   in millimetres: this is a dimensional facsimile of a paper form that must fit
+   one Letter page, so it is not expressed in utilities and never themed.
+   ========================================================= */
+.sheet {
+  width: 216mm;
+  /* A touch under Letter height so sub-pixel rounding can't push a second page. */
+  min-height: 276mm;
+  padding: 7mm 7mm 5mm;
+  background: #fff;
+  color: #000;
+  font: 8pt/1.15 "Times New Roman", Times, serif;
+  position: relative;
+}
+.sheet .lab { font-size: 7.5pt; white-space: nowrap; margin-right: 1mm; }
+.sheet .fill {
+  display: inline-block;
+  border-bottom: .4pt solid #000;
+  padding: 0 1mm;
+  margin-right: 2mm;
+  font-family: system-ui, sans-serif;
+  font-size: 8pt;
+  line-height: 1.1;
+  vertical-align: baseline;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.sheet-head { text-align: center; margin-bottom: 2mm; }
+.sheet-head .fed { font-size: 7pt; letter-spacing: .02em; }
+.sheet-head h1 { font-size: 15pt; margin: 1mm 0 0; letter-spacing: .12em; font-weight: 700; }
+.sheet .meta > div { margin-bottom: 1.4mm; display: flex; align-items: baseline; flex-wrap: nowrap; }
+
+.sheet .body { display: grid; grid-template-columns: 118mm 1fr; gap: 3mm; align-items: start; }
+
+.sheet .team { margin-bottom: 2.5mm; }
+.sheet .team-head { display: flex; align-items: baseline; border-top: .8pt solid #000; padding-top: 1mm; }
+.sheet .team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm; margin: 1mm 0; }
+.sheet .sub { font-size: 7pt; font-weight: 700; }
+.sheet .to-row, .sheet .tf-row { display: flex; align-items: center; gap: 1mm; margin-top: .6mm; }
+.sheet .to-lab, .sheet .tf-lab { font-size: 6.5pt; width: 17mm; }
+.sheet .tf-lab { width: 6mm; }
+.sheet .tbox, .sheet .tfbox {
+  width: 4mm; height: 3.2mm; border: .4pt solid #000; display: inline-flex;
+  align-items: center; justify-content: center;
+}
+.sheet .tmark { width: 2.6mm; height: 2.6mm; background: #000; display: block; }
+.sheet .tf-over { font-size: 6.5pt; font-weight: 700; }
+
+.sheet table.players { width: 100%; border-collapse: collapse; margin-top: 1mm; }
+.sheet table.players th, .sheet table.players td { border: .4pt solid #000; padding: .3mm .8mm; height: 4.5mm; font-size: 7.5pt; }
+.sheet table.players th { font-size: 6pt; font-weight: 400; text-align: center; line-height: 1.05; }
+.sheet table.players .lic { width: 16mm; }
+.sheet table.players .pname { width: 40mm; }
+.sheet table.players .pno { width: 10mm; text-align: center; font-weight: 700; }
+.sheet table.players .pin { width: 8mm; text-align: center; }
+.sheet table.players .fcell { width: 8mm; text-align: center; font-family: system-ui, sans-serif; font-size: 7pt; }
+.sheet table.players .fcell.has { font-weight: 700; }
+.sheet table.players tr.out .pno { text-decoration: line-through; }
+.sheet table.players .x { font-family: system-ui, sans-serif; font-weight: 700; }
+.sheet .coach-row { display: flex; align-items: baseline; margin-top: .8mm; }
+.sheet .cfouls { font-family: system-ui, sans-serif; font-weight: 700; font-size: 7.5pt; }
+
+.sheet .rs-title { text-align: center; font-weight: 700; font-size: 8pt; margin-bottom: 1mm; letter-spacing: .06em; }
+.sheet .rs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1mm; }
+.sheet table.rscol { border-collapse: collapse; width: 100%; }
+.sheet table.rscol th {
+  font-size: 6.5pt; font-weight: 700; border: .4pt solid #000; width: 50%; height: 3.4mm;
+}
+.sheet table.rscol td {
+  border-left: .4pt solid #000; border-right: .4pt solid #000;
+  height: 4.15mm; width: 50%; text-align: center; position: relative;
+  font-size: 6.5pt; font-variant-numeric: tabular-nums; padding: 0;
+}
+.sheet table.rscol tbody tr:last-child td { border-bottom: .4pt solid #000; }
+.sheet table.rscol td b { font-weight: 400; display: inline-block; }
+.sheet table.rscol td i {
+  font-style: normal; font-family: system-ui, sans-serif; font-weight: 700; font-size: 6pt;
+  margin-left: .6mm;
+}
+/* 3-pointer: shooter's number circled */
+.sheet table.rscol td i.three {
+  border: .5pt solid #000; border-radius: 50%; padding: 0 .4mm; line-height: 1;
+}
+/* field goal: diagonal stroke through the new total */
+.sheet table.rscol td.fg::before {
+  content: ""; position: absolute; left: 12%; right: 12%; top: 50%; height: 0;
+  border-top: .7pt solid #000; transform: rotate(-38deg);
+}
+/* free throw: the new total is circled */
+.sheet table.rscol td.ft b {
+  border: .6pt solid #000; border-radius: 50%; padding: 0 .5mm; line-height: 1.05;
+}
+.sheet table.rscol td.eop { border-bottom: 1.4pt solid #000; }
+.sheet table.rscol td.fin { outline: 1.2pt solid #000; outline-offset: -1.2pt; font-weight: 700; }
+
+.sheet .scores { margin-top: 2mm; }
+.sheet table.periods { width: 100%; border-collapse: collapse; }
+.sheet table.periods td { font-size: 7.5pt; padding: .4mm 0; }
+.sheet table.periods td.lab { width: 24mm; }
+.sheet .final { margin-top: 1.5mm; display: flex; gap: 2mm; align-items: baseline; font-size: 8pt; flex-wrap: wrap; }
+.sheet .winner { margin-top: 1.5mm; font-size: 7.5pt; display: flex; align-items: baseline; }
+
+.sheet-foot { margin-top: 2mm; border-top: .8pt solid #000; padding-top: 1.5mm; }
+.sheet .sigs { display: grid; grid-template-columns: 1fr 1fr; gap: .8mm 4mm; }
+.sheet .sigs > div { display: flex; align-items: baseline; }
+.sheet .sigs .lab { width: 34mm; }
+.sheet .sigs .protest { grid-column: 1 / -1; margin-top: 1mm; }
+.sheet .sigs .protest .lab { width: auto; }
+
+/* ---------- print ---------- */
+@page { size: Letter portrait; margin: 0; }
+
+@media print {
+  html, body { height: auto; background: #fff; color: #000; }
+  body > *:not(#print-root) { display: none !important; }
+  #print-root { display: block !important; }
+  #print-root .sheet { width: 216mm; min-height: 276mm; margin: 0; box-shadow: none; page-break-after: avoid; }
+  .sheet, .sheet * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+#print-root { display: none; }
