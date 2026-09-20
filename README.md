@@ -40,9 +40,10 @@ Two workflows in [`.github/workflows`](.github/workflows):
 **`pages.yml`** publishes to GitHub Pages on push to `main`. It copies just the browser-facing
 files into `_site/`, so `node_modules`, sources and tests are not published.
 
-> **One-time setup:** in the repository, go to **Settings → Pages** and set **Source** to
-> **GitHub Actions**. Until that is done the deploy job fails, since nothing has granted the
-> workflow a Pages site to publish to.
+The workflow passes `enablement: true`, so it switches Pages on for the repository itself the
+first time it runs. **The published site is publicly readable** — check that before merging
+anything you would not want served. To stop publishing, delete `pages.yml` and turn Pages off
+under **Settings → Pages**.
 
 The app uses only relative paths, so it works from a project subpath such as
 `https://<user>.github.io/fomuyakeykapu/` — no base-URL configuration needed.
