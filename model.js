@@ -1,6 +1,10 @@
 // Pure scoresheet logic. All sheet state (running score, fouls, time-outs,
 // period scores) is derived from game.events, so undoing or deleting an event
 // always leaves the sheet consistent.
+//
+// An event's period is its position in the log — how many endPeriod entries
+// come before it — never the `period` stamped on it when it was recorded. A
+// stamp goes stale as soon as an earlier endPeriod is deleted.
 
 export const TEAMS = ['A', 'B'];
 export const PLAYER_ROWS = 12;
@@ -93,17 +97,19 @@ export function derive(game) {
       timeouts: [],
       players,
       coach: { all: [], C: 0, B: 0, D: 0, out: false },
-      asst: { fouls: [] },
+      asst: { fouls: [], out: false },
     };
   }
   const noOf = (k, id) => game.teams[k].players.find((p) => p.id === id)?.no ?? '';
 
+  let cur = 1;
   for (const ev of game.events) {
     const t = teams[ev.team];
+    const period = cur;
     if (ev.t === 'score') {
       t.score += ev.pts;
-      t.byPeriod[ev.period] = (t.byPeriod[ev.period] || 0) + ev.pts;
-      t.marks[t.score] = { pts: ev.pts, no: noOf(ev.team, ev.player), period: ev.period };
+      t.byPeriod[period] = (t.byPeriod[period] || 0) + ev.pts;
+      t.marks[t.score] = { pts: ev.pts, no: noOf(ev.team, ev.player), period };
       const p = t.players[ev.player];
       if (p) {
         p.points += ev.pts;
@@ -116,7 +122,9 @@ export function derive(game) {
       if (ev.who === 'coach' || ev.who === 'asst') {
         t.coach.all.push(ev);
         if (ev.who === 'asst') t.asst.fouls.push(ev);
-        if (ev.type === 'C' && ev.who === 'coach') t.coach.C++;
+        // An assistant's D disqualifies the assistant, not the head coach.
+        if (ev.who === 'asst' && ev.type === 'D') t.asst.out = true;
+        else if (ev.type === 'C' && ev.who === 'coach') t.coach.C++;
         else if (ev.type === 'D') t.coach.D++;
         else t.coach.B++;
         // Disqualified on: a D, two C, or three technicals in total.
@@ -131,13 +139,14 @@ export function derive(game) {
           p.out = p.fouls.length >= 5 || p.D > 0 || p.T + p.U >= 2;
         }
         if (TEAM_FOUL_TYPES.has(ev.type)) {
-          t.teamFouls[Math.min(ev.period, 4)]++;
-          if (ev.period > 4) t.extraFouls++;
+          t.teamFouls[Math.min(period, 4)]++;
+          if (period > 4) t.extraFouls++;
         }
       }
     } else if (ev.t === 'timeout') {
-      t.timeouts.push({ period: ev.period, minute: ev.minute });
+      t.timeouts.push({ period, minute: ev.minute });
     } else if (ev.t === 'endPeriod') {
+      cur++;
       for (const k of TEAMS) {
         const s = teams[k].score;
         if (s > 0 && teams[k].endAt[s] !== 'fin') teams[k].endAt[s] = 'q';
@@ -188,6 +197,9 @@ export function warningsFor(game, d, ev) {
   if (ev.t === 'foul' && ev.who !== 'player' && team.coach.out) {
     w.push(`${label}'s coach has already been disqualified.`);
   }
+  if (ev.t === 'foul' && ev.who === 'asst' && team.asst.out) {
+    w.push(`${label}'s assistant coach has already been disqualified.`);
+  }
   if (ev.t === 'timeout') {
     const g = timeoutGroup(d.period);
     if (timeoutsUsed(team, d.period) >= g.allowed) {
@@ -200,6 +212,7 @@ export function warningsFor(game, d, ev) {
 /** One human-readable line per event, with the running score after it. */
 export function describeEvents(game) {
   const scores = { A: 0, B: 0 };
+  let period = 1;
   return game.events.map((ev) => {
     const name = teamName(game, ev.team ?? 'A');
     const player = ev.player && game.teams[ev.team]?.players.find((p) => p.id === ev.player);
@@ -219,7 +232,7 @@ export function describeEvents(game) {
         text = `${name} time-out${ev.minute !== '' && ev.minute != null ? ` (minute ${ev.minute})` : ''}`;
         break;
       case 'endPeriod':
-        text = `End of ${periodName(ev.period).toLowerCase()} (${scores.A}–${scores.B})`;
+        text = `End of ${periodName(period++).toLowerCase()} (${scores.A}–${scores.B})`;
         break;
       case 'endGame':
         text = `Game closed (${scores.A}–${scores.B})`;
@@ -234,6 +247,91 @@ export function describeEvents(game) {
 /** Loose shape check for imported files. */
 export function isGame(x) {
   return Boolean(
-    x && typeof x === 'object' && Array.isArray(x.events) && x.info && x.teams?.A?.players && x.teams?.B?.players,
+    x && typeof x === 'object' && Array.isArray(x.events) && x.info &&
+      Array.isArray(x.teams?.A?.players) && Array.isArray(x.teams?.B?.players),
   );
+}
+
+// IDs are interpolated into HTML attributes, so anything from a file must match this.
+const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;
+const BENCH_FOULS = { player: PLAYER_FOULS, coach: COACH_FOULS, asst: ['B', 'D'] };
+
+const str = (v, max = 200) => (typeof v === 'string' || typeof v === 'number' ? String(v).slice(0, max) : '');
+const obj = (v) => (v && typeof v === 'object' ? v : {});
+
+/**
+ * Rebuilds a game from untrusted data (an imported file or localStorage) field by
+ * field: only known fields survive, text is coerced to strings, unsafe or repeated
+ * IDs are replaced, and events that cannot be valid are dropped. Null when the
+ * input is not a scoresheet at all.
+ */
+export function normalizeGame(x) {
+  if (!isGame(x)) return null;
+  const seen = new Set();
+  const id = (v) => {
+    const out = typeof v === 'string' && SAFE_ID.test(v) && !seen.has(v) ? v : uid();
+    seen.add(out);
+    return out;
+  };
+
+  const g = newGame();
+  g.id = id(x.id);
+  if (Number.isFinite(x.createdAt)) g.createdAt = x.createdAt;
+  if (Number.isFinite(x.updatedAt)) g.updatedAt = x.updatedAt;
+  for (const k of Object.keys(g.info)) if (k in x.info) g.info[k] = str(x.info[k]);
+  const officials = obj(x.officials);
+  for (const k of Object.keys(g.officials)) g.officials[k] = str(officials[k]);
+  g.protest = str(x.protest);
+
+  // Old player id -> sanitized id, per team, so events stay attached to their player.
+  const players = { A: new Map(), B: new Map() };
+  for (const k of TEAMS) {
+    const src = x.teams[k];
+    const team = g.teams[k];
+    team.name = str(src.name);
+    team.coach = str(src.coach);
+    team.assistant = str(src.assistant);
+    team.players = src.players.filter((p) => p && typeof p === 'object').map((p) => {
+      const pid = id(p.id);
+      if (!players[k].has(p.id)) players[k].set(p.id, pid);
+      return {
+        id: pid,
+        licence: str(p.licence, 40),
+        name: str(p.name),
+        no: str(p.no, 10),
+        starter: p.starter === true,
+        in: p.in === true,
+      };
+    });
+    while (team.players.length < PLAYER_ROWS) team.players.push(newPlayer());
+  }
+
+  for (const e of x.events) {
+    if (!e || typeof e !== 'object' || !TEAMS.includes(e.team)) continue;
+    const base = {
+      id: id(e.id),
+      at: Number.isFinite(e.at) ? e.at : 0,
+      period: Number.isInteger(e.period) && e.period > 0 ? e.period : 1,
+      t: e.t,
+      team: e.team,
+    };
+    // A player the roster no longer lists keeps the entry (and the team total) but loses the name.
+    const player = players[e.team].get(e.player) ?? null;
+    if (e.t === 'score') {
+      if (![1, 2, 3].includes(e.pts)) continue;
+      g.events.push({ ...base, player, pts: e.pts });
+    } else if (e.t === 'foul') {
+      if (!BENCH_FOULS[e.who]?.includes(e.type)) continue;
+      const ft = [0, 1, 2, 3].includes(e.ft) ? e.ft : 0;
+      g.events.push(e.who === 'player'
+        ? { ...base, who: e.who, player, type: e.type, ft }
+        : { ...base, who: e.who, type: e.type, ft });
+    } else if (e.t === 'timeout') {
+      g.events.push(e.minute == null ? base : { ...base, minute: str(e.minute, 4) });
+    } else if (e.t === 'endPeriod' || e.t === 'endGame') {
+      g.events.push(base);
+    }
+  }
+  g.started = g.events.length > 0 || x.started === true;
+  return g;
 }

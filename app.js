@@ -1,7 +1,7 @@
 import {
   TEAMS, PLAYER_FOULS, COACH_FOULS, DEFAULT_FT, newGame, newPlayer, uid,
   derive, teamName, periodLabel, periodName, timeoutGroup, timeoutsUsed,
-  warningsFor, describeEvents, isGame,
+  warningsFor, describeEvents, normalizeGame,
 } from './model.js';
 import { renderSheet } from './sheet.js';
 
@@ -72,7 +72,7 @@ const LAST = 'fiba.last.v1';
 const loadAll = () => {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) || '[]');
-    return Array.isArray(v) ? v.filter(isGame) : [];
+    return Array.isArray(v) ? v.map(normalizeGame).filter(Boolean) : [];
   } catch {
     return [];
   }
@@ -254,7 +254,7 @@ function setupView() {
         <tbody>
           ${game.teams[k].players
             .map(
-              (p, idx) => `<tr data-pid="${p.id}">
+              (p, idx) => `<tr data-pid="${esc(p.id)}">
             <td class="px-0.5 py-[3px]"><input type="text" data-player="${k}.${idx}.licence" value="${esc(p.licence)}" inputmode="numeric"></td>
             <td class="px-0.5 py-[3px]"><input type="text" data-player="${k}.${idx}.name" value="${esc(p.name)}" placeholder="Name"></td>
             <td class="px-0.5 py-[3px]"><input type="text" data-player="${k}.${idx}.no" value="${esc(p.no)}" inputmode="numeric" placeholder="#"></td>
@@ -372,10 +372,10 @@ function liveView() {
           <span>Fouls <b class="text-text">${s.fouls.length}</b>${s.out ? ' ⛔' : ''}</span>
         </div>
         <div class="mt-1.5 grid grid-cols-4 gap-1">
-          <button class="pcard-act" data-sc="${p.id}.1" title="Free throw made">+1</button>
-          <button class="pcard-act" data-sc="${p.id}.2">+2</button>
-          <button class="pcard-act" data-sc="${p.id}.3">+3</button>
-          <button class="pcard-act text-accent" data-foul="${p.id}" title="Player foul">F</button>
+          <button class="pcard-act" data-sc="${esc(p.id)}.1" title="Free throw made">+1</button>
+          <button class="pcard-act" data-sc="${esc(p.id)}.2">+2</button>
+          <button class="pcard-act" data-sc="${esc(p.id)}.3">+3</button>
+          <button class="pcard-act text-accent" data-foul="${esc(p.id)}" title="Player foul">F</button>
         </div>
       </div>`;
         })
@@ -387,7 +387,7 @@ function liveView() {
     .reverse()
     .map(
       ({ ev, text }) =>
-        `<li class="log-row"><span class="flex-1">${esc(text)}</span><button class="btn btn-sm btn-ghost" data-del="${ev.id}" aria-label="Delete entry">✕</button></li>`,
+        `<li class="log-row"><span class="flex-1">${esc(text)}</span><button class="btn btn-sm btn-ghost" data-del="${esc(ev.id)}" aria-label="Delete entry">✕</button></li>`,
     )
     .join('');
 
@@ -601,8 +601,8 @@ function gamesDialog() {
             return `<li class="log-row">
               <span class="flex-1"><b>${esc(teamName(g, 'A'))} ${d.teams.A.score}–${d.teams.B.score} ${esc(teamName(g, 'B'))}</b>
               <br><span class="text-muted">${esc(g.info.date || '')} ${esc(g.info.competition || '')} · ${d.ended ? 'final' : periodLabel(d.period)}</span></span>
-              <button class="btn btn-sm" data-open="${g.id}">Open</button>
-              <button class="btn btn-sm btn-danger" data-drop="${g.id}">✕</button>
+              <button class="btn btn-sm" data-open="${esc(g.id)}">Open</button>
+              <button class="btn btn-sm btn-danger" data-drop="${esc(g.id)}">✕</button>
             </li>`;
           })
           .join('') || '<li class="log-row text-muted">No saved games.</li>'}
@@ -645,8 +645,8 @@ $('#file-import').onchange = async (e) => {
   e.target.value = '';
   if (!file) return;
   try {
-    const data = JSON.parse(await file.text());
-    if (!isGame(data)) throw new Error('shape');
+    const data = normalizeGame(JSON.parse(await file.text()));
+    if (!data) throw new Error('shape');
     data.id = uid();
     $('#dlg-games').close();
     openGame(data);

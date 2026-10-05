@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 
 import {
   newGame, uid, derive, timeoutGroup, timeoutsUsed, periodScores,
-  warningsFor, describeEvents, isGame, teamName,
+  warningsFor, describeEvents, isGame, normalizeGame, teamName,
 } from '../model.js';
 
 /* ---------------------------------------------------------------- helpers */
@@ -164,6 +164,21 @@ test('a coach is disqualified by two C fouls, three technicals, or one D', () =>
   assert.equal(derive(straightD).teams.A.coach.out, true);
 });
 
+test("an assistant coach's D disqualifies the assistant, not the head coach", () => {
+  const g = game();
+  benchFoul(g, 'A', 'asst', 'D');
+  const t = derive(g).teams.A;
+  assert.equal(t.asst.out, true);
+  assert.equal(t.coach.out, false);
+  assert.equal(t.coach.D, 0);
+  assert.equal(t.coach.B, 0, 'it is not a technical against the coach either');
+
+  const d = derive(g);
+  assert.deepEqual(warningsFor(g, d, { t: 'foul', who: 'coach', team: 'A', type: 'C' }), []);
+  assert.ok(warningsFor(g, d, { t: 'foul', who: 'asst', team: 'A', type: 'B' })
+    .some((x) => /assistant coach has already been disqualified/.test(x)));
+});
+
 /* ---------------------------------------------------------------- time-outs */
 
 test('time-out allowance is 2 in the first half, 3 in the second, 1 per extra period', () => {
@@ -178,6 +193,7 @@ test('time-out allowance is 2 in the first half, 3 in the second, 1 per extra pe
 test('time-outs are pooled across each half, not per period', () => {
   const g = game();
   timeout(g, 'A', 1);
+  endPeriod(g, 1);
   timeout(g, 'A', 2);
   const t = derive(g).teams.A;
 
@@ -188,6 +204,7 @@ test('time-outs are pooled across each half, not per period', () => {
 
 test('each extra period carries its own single time-out', () => {
   const g = game();
+  for (let p = 1; p <= 4; p++) endPeriod(g, p);
   timeout(g, 'A', 5);
   const t = derive(g).teams.A;
   assert.equal(timeoutsUsed(t, 5), 1);
@@ -318,6 +335,32 @@ test('deleting an entry recomputes the whole sheet', () => {
   assert.equal(after.teams.A.players[pid(g, 'A', 1)].points, 0);
 });
 
+test('deleting an earlier end of period moves later entries back a period', () => {
+  const g = game();
+  score(g, 'A', 0, 2, 1);
+  timeout(g, 'A', 1);
+  endPeriod(g, 1);
+  score(g, 'A', 0, 3, 2);
+  foul(g, 'A', 1, 'P', 2);
+  endPeriod(g, 2);
+  score(g, 'A', 0, 2, 3);
+  timeout(g, 'A', 3);
+
+  // Delete "End of period 1". Every entry keeps its stale period stamp.
+  g.events.splice(g.events.findIndex((e) => e.t === 'endPeriod'), 1);
+  const d = derive(g);
+  const t = d.teams.A;
+  assert.equal(d.period, 2);
+  assert.equal(t.score, 7);
+  assert.deepEqual(t.byPeriod, { 1: 5, 2: 2 }, 'period scores still add up to the total');
+  assert.deepEqual(periodScores(t, d.period, d.ended).periods, [5, null, null, null]);
+  assert.equal(t.marks[5].period, 1);
+  assert.equal(t.teamFouls[1], 1);
+  assert.equal(t.teamFouls[2], 0);
+  assert.deepEqual(t.timeouts.map((x) => x.period), [1, 2]);
+  assert.match(describeEvents(g).find((x) => x.ev.t === 'endPeriod').text, /End of period 1 /);
+});
+
 test('undoing the last entry reopens a closed game', () => {
   const g = game();
   score(g, 'A', 0, 2);
@@ -343,4 +386,76 @@ test('isGame rejects files that are not scoresheets', () => {
   assert.equal(isGame({}), false);
   assert.equal(isGame(null), false);
   assert.equal(isGame({ events: [], info: {}, teams: { A: {}, B: {} } }), false);
+});
+
+/* ---------------------------------------------------------------- import */
+
+test('a saved game survives normalization unchanged', () => {
+  const g = game();
+  g.info.competition = 'League';
+  g.officials.scorekeeper = 'Sam';
+  score(g, 'A', 0, 2);
+  foul(g, 'B', 1, 'U');
+  benchFoul(g, 'A', 'coach', 'C');
+  timeout(g, 'B', 1);
+  endPeriod(g, 1);
+  endGame(g, 1);
+  g.started = true;
+  assert.deepEqual(normalizeGame(JSON.parse(JSON.stringify(g))), g);
+});
+
+test('normalizeGame rejects files that are not scoresheets', () => {
+  assert.equal(normalizeGame(null), null);
+  assert.equal(normalizeGame({ events: [], info: {}, teams: { A: { players: {} }, B: { players: [] } } }), null);
+});
+
+test('IDs that could break out of an HTML attribute are replaced, keeping links intact', () => {
+  const g = game();
+  const evil = '"><img src=x onerror=alert(1)>';
+  g.id = evil;
+  g.teams.A.players[0].id = evil;
+  score(g, 'A', 0, 2);
+  g.events[0].id = evil;
+
+  const n = normalizeGame(JSON.parse(JSON.stringify(g)));
+  const ids = [n.id, n.teams.A.players[0].id, n.events[0].id];
+  for (const x of ids) assert.match(x, /^[A-Za-z0-9_-]+$/);
+  assert.equal(new Set(ids).size, 3, 'one evil value reused three times becomes three distinct ids');
+  assert.equal(n.events[0].player, n.teams.A.players[0].id, 'the basket stays credited to its shooter');
+  assert.equal(derive(n).teams.A.players[n.teams.A.players[0].id].points, 2);
+});
+
+test('missing or malformed fields are filled in rather than crashing the app', () => {
+  const n = normalizeGame({
+    info: { competition: { nested: true }, gameNo: 7 },
+    teams: { A: { name: 42, players: [null, { no: 4 }] }, B: { players: [] } },
+    events: [],
+  });
+  assert.equal(n.info.competition, '');
+  assert.equal(n.info.gameNo, '7');
+  assert.equal(n.officials.scorekeeper, '');
+  assert.equal(n.teams.A.name, '42');
+  assert.equal(n.teams.A.players[0].no, '4');
+  assert.equal(n.teams.A.players.length, 12, 'rosters are padded to the printed rows');
+  assert.equal(n.teams.B.coach, '');
+  assert.doesNotThrow(() => derive(n));
+});
+
+test('events that cannot be valid are dropped; a missing player keeps the points', () => {
+  const g = game();
+  const raw = JSON.parse(JSON.stringify(g));
+  raw.events = [
+    { id: 'a', t: 'score', team: 'C', player: pid(g, 'A', 0), pts: 2 },
+    { id: 'b', t: 'score', team: 'A', player: pid(g, 'A', 0), pts: '2' },
+    { id: 'c', t: 'foul', who: 'player', team: 'A', player: pid(g, 'A', 0), type: 'C' },
+    { id: 'd', t: 'foul', who: 'janitor', team: 'A', type: 'B' },
+    { id: 'e', t: 'mystery', team: 'A' },
+    { id: 'f', t: 'score', team: 'A', player: 'gone', pts: 3 },
+    { id: 'f', t: 'score', team: 'A', player: pid(g, 'A', 0), pts: 2 },
+  ];
+  const n = normalizeGame(raw);
+  assert.equal(n.events.length, 2);
+  assert.equal(n.events[0].player, null);
+  assert.notEqual(n.events[0].id, n.events[1].id, 'duplicate entry ids are split so deleting one keeps the other');
+  assert.equal(derive(n).teams.A.score, 5);
 });
