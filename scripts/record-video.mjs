@@ -116,6 +116,9 @@ const context = await browser.newContext({
 const demo = demoGame();
 await context.addInitScript((g) => {
   globalThis.__DEMO_GAME__ = g;
+  // Show the Sheet tab as a phone shows it, with Share PDF. Nothing is shared:
+  // the video never taps that button.
+  navigator.canShare = () => true;
 }, demo);
 const page = await context.newPage();
 await page.goto(`${ORIGIN}/__stage`);
@@ -204,6 +207,11 @@ await tap(app.locator('#foul-types button', { hasText: 'P' }), 500);
 await tap(app.locator('#foul-ft button', { hasText: '2' }), 700);
 await tap(app.locator('#foul-ok'), 900);
 
+// A time-out, with the minute off the scoreboard clock
+await caption('Time-outs record the minute', 'Tap it off the scoreboard clock');
+await tap(app.locator('#btn-timeout'), 900);
+await tap(app.locator('#timeout-minutes button', { hasText: /^6$/ }), 1000);
+
 // 4. A slip, undone
 await caption('Tapped the wrong player?', 'Undo takes it straight back');
 await tap(act('10', '+3'), 900);
@@ -244,9 +252,9 @@ await app.locator('#view').evaluate((v) => v.scrollTo({ top: v.scrollHeight, beh
 await wait(2200);
 await app.locator('#view').evaluate((v) => v.scrollTo({ top: 0, behavior: 'smooth' }));
 await wait(900);
-await caption('Export it as a PDF', 'Or save the game file to keep a copy');
+await caption('Share it as a PDF', 'An A4 sheet for WhatsApp, email or the printer');
 await wait(400);
-const pdf = app.locator('#btn-pdf');
+const pdf = app.locator('#btn-share');
 const box = await pdf.boundingBox();
 await page.evaluate(([x, y]) => {
   const d = document.createElement('div');

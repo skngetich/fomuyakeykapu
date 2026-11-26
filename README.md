@@ -44,7 +44,12 @@ While changing styles, run `npm run watch:css` to rebuild `styles.css` on save. 
 npm test        # the FIBA rules and the printed sheet (node --test, nothing extra to install)
 npm run lint    # ESLint
 npm run build   # stylesheet + _site/; fails if anything the app precaches is missing
+npm run vendor  # re-copy jsPDF, svg2pdf.js and the Figtree TTFs after updating those packages
 ```
+
+jsPDF, svg2pdf.js and the Figtree TTFs are committed under `app/vendor/` and `fonts/` so the
+source tree runs with no build step. CI fails if they differ from the versions in
+`package-lock.json`.
 
 ## The explainer video
 
@@ -152,19 +157,23 @@ a player card:
 | `+2` / `+3` | a field goal |
 | `F` | a foul — choose `P` `T` `U` `D` and the free throws awarded |
 
-Bench buttons cover time-outs and coach / assistant fouls. The bar along the bottom is always
-in reach: **Undo** reverses the last entry (with **Redo** in the message), **Log** lists every
-entry, where ✕ deletes one (with **Undo** in the message), and **End Qn** / **End game** close
-a period or the game after a confirmation.
+Bench buttons cover time-outs and coach / bench fouls. A time-out asks for the minute of the
+period (1 to 10, or 1 to 5 in an extra period), as the paper form records it, or can be recorded
+without one. The bar along the bottom is always in reach: **Undo** reverses the last entry (with
+**Redo** in the message), **Log** lists every entry, where the cross deletes one (with **Undo**
+in the message), and **End Qn** / **End game** close a period or the game after a confirmation.
+**End game** also takes an optional protest note, which is printed on the sheet.
 
 The app checks entries against the rules and asks before recording something irregular —
 scoring for a player who has fouled out, a fourth time-out in a half, ending a game level or
 early. It always lets you record it anyway: the scoresheet has to record what actually
 happened, including the officials' mistakes.
 
-**Sheet** — a live preview of the form. **Export PDF** opens the print dialog; choose
-*Save as PDF*, paper **Letter**, and set margins to **None** for a one-page match. **Save JSON**
-writes the raw game file, which **Games → Import JSON** reads back on any device.
+**Sheet** — a live preview of the A4 form. **Share PDF** (on phones that can share files) sends
+it straight to WhatsApp, email or a printer; **Download PDF** saves it. The PDF is built in the
+browser by jsPDF and svg2pdf.js with Figtree embedded, works offline, and is prepared as soon as
+the tab opens, because phones only allow sharing straight after a tap. **Save game file** writes
+the raw game, which **Games → Import JSON** reads back on any device.
 
 ## How the sheet is filled in
 
@@ -176,8 +185,15 @@ The running score follows the standard FIBA marking conventions:
 - **End of a period** — a heavy line under the last total scored in it
 - **End of the game** — the final total is boxed
 
-Team fouls show as filled boxes per period (a fifth and beyond as `+n`), time-outs as filled
-boxes, and a player who has fouled out or been disqualified has their number struck through.
+Elsewhere on the form:
+
+- **Time-outs** — 2 boxes for the first half, 3 for the second, 3 for extra periods, each holding
+  the minute of play, or a cross if none was given
+- **Team fouls** — the numbers 1 to 4 struck through per period (a fifth and beyond as `+n`)
+- **Player in** — an X for every player who played; a starter's X is circled
+- **Fouled out or disqualified** — the shirt number is struck through
+- **Signatures** — each official's typed name is printed small beside a blank line, for signing
+  the printed copy; a protest note, if any, is printed at the foot
 
 ## Where the data lives
 
@@ -197,20 +213,23 @@ cannot be valid.
 | [`index.html`](index.html), [`landing.js`](landing.js) | The landing page. |
 | [`config.js`](config.js) | Feedback form link and video path, shared by the landing page and the app. |
 | [`app/model.js`](app/model.js) | Game state and all the rules. Every derived figure on the sheet — running score, fouls, time-outs, period scores — is computed from the event list, so undo and delete can never leave the sheet inconsistent. |
-| [`app/sheet.js`](app/sheet.js) | Renders a game as the scoresheet, for both preview and print. |
+| [`app/sheet.js`](app/sheet.js) | Draws a game as the A4 scoresheet: one SVG in millimetres, used for the preview and converted to the PDF. |
+| [`app/vendor/`](app/vendor) | jsPDF and svg2pdf.js (MIT), loaded only when a PDF is made. Copied by `npm run vendor`. |
+| [`fonts/`](fonts) | Figtree (SIL Open Font License): WOFF2 for the pages, TTF for embedding in the PDF. |
 | [`app/app.js`](app/app.js) | Screens, entry flow, theme, storage, import/export, update prompt. |
 | [`app/sw.js`](app/sw.js) | Service worker: one complete cache per release, pinned while a game is open. |
-| [`src/input.css`](src/input.css) | Tailwind entry point: theme tokens, component classes, and the scoresheet's own CSS. Edit this, not `styles.css`. |
+| [`src/input.css`](src/input.css) | Tailwind entry point: theme tokens and component classes. Edit this, not `styles.css`. |
 | `styles.css` | Build output, committed. Generated by `npm run build:css`. |
 | [`test/`](test) | The rules and the printed sheet, pinned down. |
 
-The app UI is Tailwind; the printed sheet is hand-written CSS in millimetres under
-`@page Letter`. That split is deliberate — the sheet is a dimensional facsimile that has to
-land inside one page, which utility classes describe badly.
+The app UI is Tailwind; the sheet is an SVG with every stroke and label positioned in
+millimetres and styled with attributes. That split is deliberate: the sheet is a dimensional
+facsimile that has to land on one A4 page, and the PDF converter has to see exactly what the
+preview shows.
 
 ## Limits worth knowing
 
-- Period scores are recorded, but there is no game clock; the minute of a time-out is not asked for.
-- Substitutions are not tracked minute by minute — the *Player in* column marks starters (`✕`)
-  and anyone who later appears in the game (`✓`).
-- More than twelve players on a team will push the form onto a second printed page.
+- There is no game clock: the minute of a time-out is read off the scoreboard and tapped in.
+- Substitutions are not tracked minute by minute — the *Player in* column marks starters and
+  anyone who later appears in the game.
+- More than twelve players on a team still fit on the one page, with thinner rows.
