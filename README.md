@@ -46,6 +46,19 @@ npm run lint    # ESLint
 npm run build   # stylesheet + _site/; fails if anything the app precaches is missing
 ```
 
+## The explainer video
+
+```bash
+npm run video
+```
+
+[`scripts/record-video.mjs`](scripts/record-video.mjs) plays one short game in the real app
+and writes `media/how-it-works.mp4` and its poster `media/how-it-works.jpg`. The app runs with
+`?demo`, which keeps all data in memory, so recording never touches saved games. The teams
+and players are made up. It needs Playwright's Chromium (`npx playwright install chromium`)
+and `ffmpeg` on the PATH. Re-record whenever the screens change, so the video always shows the
+app as it is.
+
 ## Deployment (Cloudflare Pages)
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push to `main` and every
