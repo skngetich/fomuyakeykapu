@@ -80,26 +80,27 @@ function demoGame() {
 }
 
 const STAGE = `<!doctype html><html><head><style>
-  html, body { margin: 0; height: 100%; background: #0f1216; overflow: hidden;
-    font-family: "Segoe UI", system-ui, sans-serif; color: #e8ecf1; }
+  @font-face { font-family: "Figtree"; font-weight: 300 900; src: url("/fonts/figtree-latin-wght-normal.woff2"); }
+  html, body { margin: 0; height: 100%; background: #131211; overflow: hidden;
+    font-family: "Figtree", system-ui, sans-serif; color: #edebe6; }
   #cap { position: absolute; left: 40px; right: 40px; top: 52px; height: 150px;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center; font-size: 40px; font-weight: 650; line-height: 1.2; transition: opacity .25s; }
-  #cap small { display: block; font-size: 26px; font-weight: 400; color: #9aa5b4; margin-top: 10px; }
+    text-align: center; font-size: 40px; font-weight: 600; line-height: 1.2; transition: opacity .25s; }
+  #cap small { display: block; font-size: 26px; font-weight: 400; color: #a39e96; margin-top: 12px; }
   #phone { position: absolute; left: 50%; top: 236px; width: 390px; height: 700px;
     transform: translateX(-50%) scale(1.42); transform-origin: top center;
-    border: 7px solid #2b323d; border-radius: 34px; overflow: hidden; background: #fff; }
+    border: 8px solid #2d2b28; border-radius: 34px; overflow: hidden; background: #fff; }
   #phone iframe { width: 100%; height: 100%; border: 0; display: block; }
   .tap { position: absolute; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%;
     background: rgb(255 122 26 / .45); border: 3px solid #ff7a1a; pointer-events: none;
     animation: tap .6s ease-out forwards; z-index: 5; }
   @keyframes tap { from { transform: scale(.4); opacity: 1 } to { transform: scale(1.3); opacity: 0 } }
   #card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
-    justify-content: center; gap: 24px; background: #0f1216; text-align: center; z-index: 10;
+    justify-content: center; gap: 24px; background: #131211; text-align: center; z-index: 10;
     transition: opacity .4s; }
   #card img { width: 160px; height: 160px; }
-  #card h1 { margin: 0; font-size: 52px; }
-  #card p { margin: 0; font-size: 30px; color: #9aa5b4; max-width: 560px; line-height: 1.35; }
+  #card h1 { margin: 0; font-size: 52px; font-weight: 500; letter-spacing: -0.02em; }
+  #card p { margin: 0; font-size: 30px; color: #a39e96; max-width: 560px; line-height: 1.35; }
 </style></head><body>
   <div id="cap"></div>
   <div id="phone"><iframe id="app"></iframe></div>

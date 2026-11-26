@@ -25,6 +25,8 @@ const ASSETS = [
   '../config.js',
   '../theme-init.js',
   '../styles.css',
+  '../fonts/figtree-latin-wght-normal.woff2',
+  '../fonts/figtree-latin-ext-wght-normal.woff2',
   '../icons/icon.svg',
   '../icons/icon-192.png',
   '../icons/icon-512.png',

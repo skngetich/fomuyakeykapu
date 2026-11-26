@@ -14,22 +14,22 @@
 </head>
 <body class="landing">
 <header class="mx-auto flex max-w-[1000px] items-center gap-3 px-4 py-3">
-  <a href="./" class="flex flex-1 items-center gap-2 font-semibold text-text no-underline">
+  <a href="./" class="flex flex-1 items-center gap-2 font-semibold !text-text !no-underline">
     <img src="icons/icon.svg" alt="" width="28" height="28">Basketball Scoresheet
   </a>
-  <button class="btn btn-sm btn-ghost" id="btn-theme" aria-label="Change theme"></button>
+  <button class="btn btn-ghost btn-icon" id="btn-theme" aria-label="Change theme"></button>
   <a class="btn btn-sm" href="app/">Open app</a>
 </header>
 
 <main class="mx-auto max-w-[1000px] px-4">
-  <section class="grid items-center gap-8 py-8 md:grid-cols-[1fr_320px] md:py-14">
+  <section class="grid items-center gap-12 py-12 md:grid-cols-[1fr_320px] md:py-16">
     <div>
-      <h1 class="text-[34px] leading-tight font-bold md:text-[44px]">Keep the scoresheet on your phone.</h1>
-      <p class="mt-3 max-w-[34rem] text-[17px] text-muted">
+      <h1 class="text-[40px] leading-[1.05] font-medium tracking-[-0.02em] md:text-[60px] md:tracking-[-0.03em]">Keep the scoresheet on your phone</h1>
+      <p class="mt-4 max-w-[34rem] text-lg leading-[1.6] text-muted">
         Score a basketball game courtside, even with no signal, and finish with a PDF laid out like
         the FIBA scoresheet. Free, with no account to create.
       </p>
-      <div class="mt-6 flex flex-wrap gap-2">
+      <div class="mt-8 flex flex-wrap gap-2">
         <a class="btn btn-primary" href="app/">Open the scoresheet</a>
         <a class="btn" href="#video">Watch how it works</a>
       </div>
@@ -45,17 +45,17 @@
     </figure>
   </section>
 
-  <section class="py-6" aria-labelledby="what">
+  <section class="py-10" aria-labelledby="what">
     <h2 id="what" class="landing-h2">What it does</h2>
-    <ul class="grid gap-3 md:grid-cols-2">
-      <li class="card m-0"><b>Score with a tap.</b> +1, +2, +3 and fouls for each player. The running score, team fouls and time-outs are kept for you.</li>
-      <li class="card m-0"><b>Catches slips.</b> It asks first when something breaks a rule, like scoring for a player who has fouled out, and every entry can be undone.</li>
-      <li class="card m-0"><b>Works with no signal.</b> Once it has opened on your phone, it keeps working offline for the whole game.</li>
-      <li class="card m-0"><b>A PDF at the final buzzer.</b> Running score, fouls, time-outs and period scores, marked the way scorekeepers mark the paper form.</li>
-    </ul>
+    <dl class="grid max-w-[52rem] gap-x-12 gap-y-6 md:grid-cols-2">
+      <div><dt class="font-medium">Score with a tap</dt><dd class="mt-1 text-muted">+1, +2, +3 and fouls for each player. The running score, team fouls and time-outs are kept for you.</dd></div>
+      <div><dt class="font-medium">Catches slips</dt><dd class="mt-1 text-muted">It asks first when something breaks a rule, like scoring for a player who has fouled out, and every entry can be undone.</dd></div>
+      <div><dt class="font-medium">Works with no signal</dt><dd class="mt-1 text-muted">Once it has opened on your phone, it keeps working offline for the whole game.</dd></div>
+      <div><dt class="font-medium">A PDF at the final buzzer</dt><dd class="mt-1 text-muted">Running score, fouls, time-outs and period scores, marked the way scorekeepers mark the paper form.</dd></div>
+    </dl>
   </section>
 
-  <section class="py-6" aria-labelledby="data">
+  <section class="py-10" aria-labelledby="data">
     <h2 id="data" class="landing-h2">Your games stay on your phone</h2>
     <p class="max-w-[40rem]">
       Nothing is uploaded and there is no sign-in. Games are saved in your phone's browser, so clearing
@@ -63,12 +63,12 @@
     </p>
   </section>
 
-  <section class="py-6" aria-labelledby="install">
+  <section class="py-10" aria-labelledby="install">
     <h2 id="install" class="landing-h2">Install it before game day</h2>
-    <p class="mb-3 max-w-[40rem]">Installed, it opens from your home screen like any other app and is ready when the gym has no signal.</p>
+    <p class="mb-4 max-w-[40rem]">Installed, it opens from your home screen like any other app and is ready when the gym has no signal.</p>
     <div class="grid gap-3 md:grid-cols-2">
       <div class="card m-0">
-        <h3 class="mb-1.5 font-semibold">Android (Chrome)</h3>
+        <h3 class="mb-2 font-medium">Android (Chrome)</h3>
         <ol class="steps">
           <li>Open <a href="app/">the scoresheet</a>.</li>
           <li>Tap the menu <b>⋮</b>.</li>
@@ -76,7 +76,7 @@
         </ol>
       </div>
       <div class="card m-0">
-        <h3 class="mb-1.5 font-semibold">iPhone (Safari)</h3>
+        <h3 class="mb-2 font-medium">iPhone (Safari)</h3>
         <ol class="steps">
           <li>Open <a href="app/">the scoresheet</a> in Safari.</li>
           <li>Tap <b>Share</b>.</li>
@@ -86,19 +86,19 @@
     </div>
   </section>
 
-  <section class="py-6" aria-labelledby="leagues">
+  <section class="py-10" aria-labelledby="leagues">
     <h2 id="leagues" class="landing-h2">For league organisers</h2>
     <p class="max-w-[40rem]">
       Send this page to your scorekeepers. Each one sets the sheet heading to your tournament or
       federation name once, and every new game starts with it.
     </p>
-    <p class="mt-3" id="feedback" hidden>
+    <p class="mt-4" id="feedback" hidden>
       Something wrong, or missing? <a id="feedback-link" href="#" target="_blank" rel="noopener">Send feedback</a>.
     </p>
   </section>
 </main>
 
-<footer class="mx-auto max-w-[1000px] border-t border-line px-4 py-6 text-xs text-muted">
+<footer class="mx-auto mt-10 max-w-[1000px] border-t border-line px-4 py-8 text-xs text-muted">
   Follows FIBA scoresheet conventions. Not affiliated with or endorsed by FIBA.
 </footer>
 
