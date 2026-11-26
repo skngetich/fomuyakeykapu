@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f4f6f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1216" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Keep a basketball scoresheet on your phone, offline, and export it as a PDF.">
+<title>Basketball Scoresheet</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<script src="../theme-init.js"></script>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<div id="app" class="mx-auto flex h-full max-w-[1100px] flex-col">
+  <div class="flex items-center gap-1 border-b border-line bg-surface px-3 py-2 pt-[calc(0.5rem+env(safe-area-inset-top))]">
+    <h1 class="m-0 min-w-0 flex-1 text-base font-semibold">Scoresheet
+      <span id="subtitle" class="block truncate text-xs font-normal text-muted">New game</span>
+    </h1>
+    <button class="btn btn-sm btn-ghost" id="btn-help" aria-label="How to score" title="How to score">?</button>
+    <button class="btn btn-sm btn-ghost" id="btn-theme" aria-label="Change theme"></button>
+    <button class="btn btn-sm btn-ghost" id="btn-games">Games</button>
+  </div>
+  <div id="update-bar" class="hidden items-center gap-2 border-b border-line bg-surface-2 px-3 py-2 text-[13px]" role="status">
+    <span class="flex-1">A new version is ready.</span>
+    <button class="btn btn-sm btn-primary" id="btn-update">Reload</button>
+  </div>
+  <div class="flex gap-1 border-b border-line bg-surface px-3 py-1.5" role="tablist">
+    <button class="seg" role="tab" id="tab-setup" aria-selected="true">Setup</button>
+    <button class="seg" role="tab" id="tab-live" aria-selected="false">Live</button>
+    <button class="seg" role="tab" id="tab-sheet" aria-selected="false">Sheet</button>
+  </div>
+  <main id="view" class="flex-1 overflow-y-auto px-3 pt-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))]"></main>
+  <div id="bar" class="hidden grid-cols-4 gap-1.5 border-t border-line bg-surface px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]"></div>
+</div>
+
+<!-- Confirmations: rule warnings and irreversible game steps -->
+<dialog id="dlg-confirm" class="modal">
+  <h3 class="mb-2 text-base font-semibold" id="confirm-title">Check this entry</h3>
+  <div class="modal-warn" id="confirm-warnings"></div>
+  <p class="mt-1.5 text-xs text-muted" id="confirm-body"></p>
+  <div class="mt-3.5 flex justify-end gap-2">
+    <button class="btn btn-ghost" id="confirm-cancel">Cancel</button>
+    <button class="btn btn-primary" id="confirm-ok">Record anyway</button>
+  </div>
+</dialog>
+
+<!-- Foul entry -->
+<dialog id="dlg-foul" class="modal">
+  <h3 class="mb-2 text-base font-semibold" id="foul-title">Foul</h3>
+  <p class="text-xs text-muted">Type</p>
+  <div class="my-2 grid grid-cols-[repeat(auto-fit,minmax(64px,1fr))] gap-1.5" id="foul-types"></div>
+  <p class="mt-1.5 text-xs text-muted">Free throws awarded</p>
+  <div class="my-2 grid grid-cols-[repeat(auto-fit,minmax(64px,1fr))] gap-1.5" id="foul-ft"></div>
+  <div class="mt-3.5 flex justify-end gap-2">
+    <button class="btn btn-ghost" id="foul-cancel">Cancel</button>
+    <button class="btn btn-primary" id="foul-ok">Record</button>
+  </div>
+</dialog>
+
+<!-- Entry log, opened from the live screen's bottom bar -->
+<dialog id="dlg-log" class="modal">
+  <h3 class="mb-2 text-base font-semibold" id="log-title">Entries</h3>
+  <ul class="m-0 max-h-[60vh] list-none overflow-y-auto p-0" id="log-list"></ul>
+  <div class="mt-3.5 flex justify-end gap-2">
+    <button class="btn btn-primary" id="log-close">Close</button>
+  </div>
+</dialog>
+
+<!-- Saved games -->
+<dialog id="dlg-games" class="modal">
+  <h3 class="mb-2 text-base font-semibold">Saved games</h3>
+  <div id="games-list"></div>
+  <div class="mt-3.5 flex justify-end gap-2">
+    <button class="btn btn-ghost" id="games-import">Import JSON</button>
+    <button class="btn btn-primary" id="games-close">Close</button>
+  </div>
+</dialog>
+
+<!-- How to score: opens on first launch and from the ? button -->
+<dialog id="dlg-help" class="modal help">
+  <h3 class="mb-2 text-base font-semibold">How to score</h3>
+  <div class="max-h-[65vh] overflow-y-auto pr-1">
+    <h4>1. Set up</h4>
+    <p>On <b>Setup</b>, enter the sheet heading, both teams and their players' shirt numbers. Tick <b>St</b> for each team's starting five.</p>
+    <h4>2. Score</h4>
+    <p>On <b>Live</b>, tap a team's score at the top to pick that team, then use the player's buttons:</p>
+    <ul>
+      <li><b>+1</b> a made free throw, <b>+2</b> / <b>+3</b> a field goal</li>
+      <li><b>F</b> a foul: choose the type and the free throws awarded</li>
+    </ul>
+    <p>Time-outs and coach or bench fouls are under the player cards.</p>
+    <h4>3. Fix mistakes</h4>
+    <p><b>Undo</b> removes the last entry. <b>Log</b> lists every entry: tap ✕ to delete one, then <b>Undo</b> in the message if that was a slip.</p>
+    <p>If something breaks a rule, the app asks first. You can always record it anyway: the sheet records what actually happened.</p>
+    <h4>4. Periods and the end</h4>
+    <p>Tap <b>End Q1</b> (and so on) when each period ends, and <b>End game</b> at the final buzzer.</p>
+    <h4>5. Export</h4>
+    <p>On <b>Sheet</b>, export the PDF. <b>Save JSON</b> keeps a copy of the game you can import on any phone.</p>
+    <h4>Your games stay on this phone</h4>
+    <p>Nothing is uploaded. Clearing the browser's data deletes saved games, so export anything you need to keep.</p>
+    <p><b>Install it</b> so it opens like an app and works with no signal:</p>
+    <ul>
+      <li><b>Android (Chrome):</b> menu <b>⋮</b> → <b>Install app</b> or <b>Add to Home screen</b></li>
+      <li><b>iPhone (Safari):</b> <b>Share</b> → <b>Add to Home Screen</b></li>
+    </ul>
+    <p id="help-links"></p>
+  </div>
+  <div class="mt-3.5 flex justify-end gap-2">
+    <button class="btn btn-primary" id="help-close">Got it</button>
+  </div>
+</dialog>
+
+<input type="file" id="file-import" accept="application/json,.json" class="hidden">
+
+<!-- The printable scoresheet is rendered here on demand -->
+<div id="print-root" aria-hidden="true"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

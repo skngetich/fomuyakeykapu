@@ -5,8 +5,8 @@ import assert from 'node:assert/strict';
 
 import {
   newGame, uid, derive, timeoutGroup, timeoutsUsed, periodScores,
-  warningsFor, describeEvents, isGame, normalizeGame, teamName,
-} from '../model.js';
+  warningsFor, setupWarnings, isOpen, describeEvents, isGame, normalizeGame, teamName,
+} from '../app/model.js';
 
 /* ---------------------------------------------------------------- helpers */
 
@@ -458,4 +458,49 @@ test('events that cannot be valid are dropped; a missing player keeps the points
   assert.equal(n.events[0].player, null);
   assert.notEqual(n.events[0].id, n.events[1].id, 'duplicate entry ids are split so deleting one keeps the other');
   assert.equal(derive(n).teams.A.score, 5);
+});
+
+/* ---------------------------------------------------------------- setup */
+
+test('a complete setup has nothing to confirm', () => {
+  assert.deepEqual(setupWarnings(game()), []);
+});
+
+test('setup flags missing names, repeated or missing numbers, and the wrong number of starters', () => {
+  const g = game();
+  g.teams.A.name = '';
+  g.teams.A.players[1].no = '4'; // same as players[0]
+  g.teams.B.players[6].no = '';
+  g.teams.B.players[0].starter = false;
+  const w = setupWarnings(g);
+  assert.ok(w.includes('Team A has no name.'));
+  assert.ok(w.includes('Team A: shirt number 4 is used 2 times.'));
+  assert.ok(w.includes('Lions: 1 player has no shirt number.'));
+  assert.ok(w.includes('Lions has 4 starters ticked, not 5.'));
+  assert.equal(w.length, 4);
+});
+
+test('an empty roster is one warning, not a list of them', () => {
+  const g = newGame();
+  g.teams.A.name = 'Hawks';
+  g.teams.B.name = 'Lions';
+  assert.deepEqual(setupWarnings(g), ['Hawks has no players entered.', 'Lions has no players entered.']);
+});
+
+test('a game is open from its first entry until it is closed', () => {
+  const g = game();
+  assert.equal(isOpen(g), false);
+  score(g, 'A', 0, 2);
+  assert.equal(isOpen(g), true);
+  endGame(g, 1);
+  assert.equal(isOpen(g), false);
+  g.events = [];
+  g.started = true;
+  assert.equal(isOpen(g), false, 'undoing every entry leaves nothing to protect');
+});
+
+test('the sheet heading survives import', () => {
+  const g = game();
+  g.info.heading = 'Riverside Summer League';
+  assert.equal(normalizeGame(JSON.parse(JSON.stringify(g))).info.heading, 'Riverside Summer League');
 });

@@ -44,6 +44,7 @@ export function newGame() {
     updatedAt: now,
     started: false,
     info: {
+      heading: '',
       competition: '',
       gameNo: '',
       place: '',
@@ -208,6 +209,38 @@ export function warningsFor(game, d, ev) {
   }
   return w;
 }
+
+/**
+ * Setup problems worth confirming before scoring starts. None of them blocks:
+ * rosters change late, and the sheet must record what actually happened.
+ */
+export function setupWarnings(game) {
+  const w = [];
+  for (const k of TEAMS) {
+    const team = game.teams[k];
+    const label = teamName(game, k);
+    if (!team.name.trim()) w.push(`Team ${k} has no name.`);
+    const listed = team.players.filter((p) => p.no.trim() || p.name.trim());
+    if (!listed.length) {
+      w.push(`${label} has no players entered.`);
+      continue;
+    }
+    const seen = new Map();
+    for (const p of listed) {
+      const no = p.no.trim();
+      if (no) seen.set(no, (seen.get(no) ?? 0) + 1);
+    }
+    for (const [no, n] of seen) if (n > 1) w.push(`${label}: shirt number ${no} is used ${n} times.`);
+    const unnumbered = listed.filter((p) => !p.no.trim()).length;
+    if (unnumbered) w.push(`${label}: ${unnumbered} player${unnumbered > 1 ? 's have' : ' has'} no shirt number.`);
+    const starters = listed.filter((p) => p.starter).length;
+    if (starters !== 5) w.push(`${label} has ${starters} starter${starters === 1 ? '' : 's'} ticked, not 5.`);
+  }
+  return w;
+}
+
+/** True while a game has entries and has not been closed. */
+export const isOpen = (game) => Boolean(game?.events.length) && !derive(game).ended;
 
 /** One human-readable line per event, with the running score after it. */
 export function describeEvents(game) {

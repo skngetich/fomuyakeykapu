@@ -1,9 +1,9 @@
 {
-  "name": "fiba-scoresheet",
+  "name": "basketball-scoresheet",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Offline-first PWA for keeping a FIBA basketball scoresheet and exporting it as a PDF.",
+  "description": "Offline-first PWA for keeping a basketball scoresheet on a phone, following FIBA scoresheet conventions, and exporting it as a PDF.",
   "license": "MIT",
   "scripts": {
     "build:css": "tailwindcss -i src/input.css -o styles.css --minify",
@@ -13,10 +13,14 @@
     "test": "node --test \"test/**/*.test.js\"",
     "build:site": "node scripts/build-site.mjs",
     "build": "npm run build:css && npm run build:site",
-    "deploy": "npm run build && firebase deploy --only hosting"
+    "serve:site": "npm run build && python -m http.server 5174 -d _site",
+    "lint": "eslint ."
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@tailwindcss/cli": "^4.3.3",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
     "tailwindcss": "^4.3.3"
   }
 }

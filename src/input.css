@@ -1,11 +1,12 @@
 /* source(none) turns off automatic file detection: the class list comes only from
-   the three files below. Without it Tailwind also scans tests, workflows and the
+   the files below. Without it Tailwind also scans tests, workflows and the
    README, so unrelated edits would churn the committed styles.css. */
 @import "tailwindcss" source(none);
 
 @source "../index.html";
-@source "../app.js";
-@source "../sheet.js";
+@source "../app/index.html";
+@source "../app/app.js";
+@source "../app/sheet.js";
 
 /* Theme is chosen by the app, not only by the OS, so the dark variant keys off a
    class on <html> that app.js sets from the saved preference. */
@@ -182,12 +183,29 @@
       text-[13px] font-semibold active:translate-y-px;
   }
 
+  /* Live screen: the scoreboard stays pinned while the player cards scroll.
+     Each team's score is also the button that shows that team's roster. */
+  .live-top {
+    /* -top-3 matches the scroll area's top padding, which sticky offsets measure from. */
+    @apply sticky -top-3 z-10 -mx-3 -mt-3 mb-3 border-b border-line bg-surface px-3 py-2;
+  }
+  #bar .btn {
+    @apply px-1 text-sm whitespace-nowrap;
+  }
+  .score-side {
+    @apply min-w-0 cursor-pointer rounded-[10px] border border-line bg-surface-2 px-2 py-1.5;
+  }
+  .score-side[aria-pressed="true"] {
+    @apply border-info bg-info text-info-fg;
+  }
+
   .log-row {
     @apply flex items-center gap-2 border-b border-line px-1 py-1.5 text-[13px];
   }
 
+  /* m-auto: Tailwind's reset zeroes margins, which stops a modal <dialog> centring itself. */
   .modal {
-    @apply w-[min(420px,calc(100vw-2rem))] rounded-2xl border border-line
+    @apply m-auto w-[min(420px,calc(100vw-2rem))] rounded-2xl border border-line
       bg-surface p-4 text-text;
   }
   .modal::backdrop {
@@ -208,11 +226,54 @@
     @apply fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-1/2 z-60
       -translate-x-1/2 rounded-full border border-line bg-surface-2 px-4 py-2.5 text-[13px];
     box-shadow: var(--app-shadow);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    max-width: calc(100vw - 2rem);
+  }
+  /* Clear the live screen's bottom bar. */
+  .has-bar .toast {
+    bottom: calc(4.5rem + env(safe-area-inset-bottom));
+  }
+  .toast-act {
+    @apply cursor-pointer rounded-full border-0 bg-transparent px-1 font-semibold text-info;
+  }
+
+  .help h4 {
+    @apply mt-3 mb-1 text-sm font-semibold;
+  }
+  .help p,
+  .help li {
+    @apply text-[13px];
+  }
+  .help p {
+    @apply mb-1.5;
+  }
+  .help ul {
+    @apply mb-1.5 list-disc pl-5;
+  }
+  .help a {
+    @apply text-info underline;
   }
 
   /* The roster is a dense 12-row grid, so its inputs run tighter than the rest. */
   .roster input[type="text"] {
     @apply min-h-[38px] px-2 py-1.5;
+  }
+
+  /* ---- landing page ---- */
+  .landing a:not(.btn) {
+    @apply text-info underline underline-offset-2;
+  }
+  .landing-h2 {
+    @apply mb-3 text-xl font-semibold;
+  }
+  .landing .steps {
+    @apply list-decimal space-y-1 pl-5 text-[14px];
+  }
+  /* The explainer video sits in a plain phone-shaped frame. */
+  .phone video {
+    @apply block aspect-[9/16] w-full rounded-[28px] border-[6px] border-text bg-black object-cover;
   }
 
   /* Neutral mat behind the paper preview, in both themes. */
@@ -252,7 +313,7 @@
   white-space: nowrap;
 }
 .sheet-head { text-align: center; margin-bottom: 2mm; }
-.sheet-head .fed { font-size: 7pt; letter-spacing: .02em; }
+.sheet-head .fed { font-size: 9pt; font-weight: 700; letter-spacing: .02em; }
 .sheet-head h1 { font-size: 15pt; margin: 1mm 0 0; letter-spacing: .12em; font-weight: 700; }
 .sheet .meta > div { margin-bottom: 1.4mm; display: flex; align-items: baseline; flex-wrap: nowrap; }
 
