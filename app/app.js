@@ -362,7 +362,7 @@ function toast(msg, action) {
 }
 
 function helpDialog() {
-  const links = [`<a href="../${VIDEO}" target="_blank" rel="noopener">Watch the one-minute video</a>`];
+  const links = [`<a href="../${VIDEO}" target="_blank" rel="noopener">Watch the short video</a>`];
   const fb = feedbackUrl(VERSION);
   if (fb) links.push(`<a href="${esc(fb)}" target="_blank" rel="noopener">Send feedback</a>`);
   $('#help-links').innerHTML = `${links.join(' · ')}<br><span class="text-muted">Version ${esc(VERSION)}</span>`;

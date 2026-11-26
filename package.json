@@ -14,13 +14,15 @@
     "build:site": "node scripts/build-site.mjs",
     "build": "npm run build:css && npm run build:site",
     "serve:site": "npm run build && python -m http.server 5174 -d _site",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "video": "node scripts/record-video.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@tailwindcss/cli": "^4.3.3",
     "eslint": "^10.15.0",
     "globals": "^17.14.0",
+    "playwright": "^1.65.1",
     "tailwindcss": "^4.3.3"
   }
 }

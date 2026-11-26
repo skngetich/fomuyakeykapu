@@ -271,9 +271,9 @@
   .landing .steps {
     @apply list-decimal space-y-1 pl-5 text-[14px];
   }
-  /* The explainer video sits in a plain phone-shaped frame. */
+  /* The explainer video draws its own phone frame, so it only needs rounding. */
   .phone video {
-    @apply block aspect-[9/16] w-full rounded-[28px] border-[6px] border-text bg-black object-cover;
+    @apply block aspect-[9/16] w-full rounded-2xl bg-[#0f1216] object-cover;
   }
 
   /* Neutral mat behind the paper preview, in both themes. */

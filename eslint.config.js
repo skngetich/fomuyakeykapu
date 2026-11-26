@@ -22,6 +22,11 @@ export default [
     languageOptions: { globals: globals.node },
   },
   {
+    // Functions passed to page.evaluate run in the browser.
+    files: ['scripts/record-video.mjs'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
+  {
     rules: {
       'no-unused-vars': ['error', { caughtErrors: 'none' }],
       eqeqeq: ['error', 'smart'],
