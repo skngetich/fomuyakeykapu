@@ -237,7 +237,7 @@ const RECORD_NOTE = 'The scoresheet is the official record — only record this 
 function confirmDialog(
   warnings,
   onOk,
-  { title = 'Check this entry', body = RECORD_NOTE, ok: okLabel = 'Record anyway', onCancel } = {},
+  { title = 'Check this entry', body = RECORD_NOTE, ok: okLabel = 'Record anyway', onCancel, extra = '' } = {},
 ) {
   const dlg = $('#dlg-confirm');
   $('#confirm-title').textContent = title;
@@ -245,6 +245,8 @@ function confirmDialog(
   box.hidden = !warnings.length;
   box.innerHTML = `<ul class="m-0 list-disc pl-4">${warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>`;
   $('#confirm-body').textContent = body;
+  // Optional fields under the question, read by onOk (which receives the dialog).
+  $('#confirm-extra').innerHTML = extra;
   const ok = $('#confirm-ok');
   const cancel = $('#confirm-cancel');
   ok.textContent = okLabel;
@@ -254,12 +256,35 @@ function confirmDialog(
   };
   ok.onclick = () => {
     close();
-    onOk();
+    onOk(dlg);
   };
   cancel.onclick = () => {
     close();
     onCancel?.();
   };
+  dlg.showModal();
+}
+
+/**
+ * The minute of play a time-out was granted in, as the paper form records it:
+ * 1 to 10 in regulation, 1 to 5 in an extra period. Skip records it with no minute.
+ */
+function timeoutDialog({ title, period, onOk }) {
+  const dlg = $('#dlg-timeout');
+  $('#timeout-title').textContent = title;
+  const minutes = period > 4 ? 5 : 10;
+  $('#timeout-minutes').innerHTML = Array.from(
+    { length: minutes },
+    (_, i) => `<button class="choice-btn tabular-nums" data-min="${i + 1}">${i + 1}</button>`,
+  ).join('');
+  const close = () => dlg.close();
+  const pick = (minute) => () => {
+    close();
+    onOk(minute);
+  };
+  $$('#timeout-minutes button').forEach((b) => (b.onclick = pick(b.dataset.min)));
+  $('#timeout-skip').onclick = pick('');
+  $('#timeout-cancel').onclick = close;
   dlg.showModal();
 }
 
@@ -624,7 +649,12 @@ function bindLive(root, bar) {
     };
   });
 
-  $('#btn-timeout', root).onclick = () => pushEvent({ t: 'timeout', team: liveTeam });
+  $('#btn-timeout', root).onclick = () =>
+    timeoutDialog({
+      title: `Time-out — ${teamName(game, liveTeam)}`,
+      period: derive(game).period,
+      onOk: (minute) => pushEvent({ t: 'timeout', team: liveTeam, minute }),
+    });
   $('#btn-coach-foul', root).onclick = () =>
     foulDialog({
       title: `Coach foul — ${teamName(game, liveTeam)}`,
@@ -660,7 +690,9 @@ function bindLive(root, bar) {
     const warn = [];
     if (d.teams.A.score === d.teams.B.score) warn.push('The score is level — a basketball game cannot end in a tie.');
     if (d.period < 4) warn.push(`Only ${d.period - 1} of 4 periods have been closed.`);
-    const finish = () => {
+    const finish = (dlg) => {
+      // A protest is noted on the sheet; the captain signs the printed copy.
+      game.protest = $('#protest-on', dlg).checked ? $('#protest-note', dlg).value.trim() || 'Protest lodged' : '';
       // Only close the period if "End <period>" was not already pressed, so the
       // game does not get credited with an extra empty period.
       const last = game.events[game.events.length - 1];
@@ -675,6 +707,12 @@ function bindLive(root, bar) {
       title: 'End the game?',
       body: `Final score ${teamName(game, 'A')} ${d.teams.A.score}–${d.teams.B.score} ${teamName(game, 'B')}. You can undo this.`,
       ok: 'End game',
+      extra: `
+        <label class="mt-4 flex items-center gap-2 text-sm">
+          <input type="checkbox" id="protest-on"${game.protest ? ' checked' : ''}> A team is playing under protest
+        </label>
+        <label class="field mt-2">Protest note (optional)
+          <input type="text" id="protest-note" value="${esc(game.protest)}" placeholder="Team and reason"></label>`,
     });
   };
 }
@@ -683,66 +721,137 @@ function bindLive(root, bar) {
 
 function sheetView() {
   const d = derive(game);
+  const share = canShareFiles();
   return `
     <div class="card">
       <h2 class="card-title">Export</h2>
       <div class="${ROW}">
-        <button class="btn btn-primary" id="btn-pdf">Export PDF</button>
-        <button class="btn" id="btn-json">Save JSON</button>
+        ${share ? '<button class="btn btn-primary" id="btn-share">Share PDF</button>' : ''}
+        <button class="btn${share ? '' : ' btn-primary'}" id="btn-pdf">Download PDF</button>
+        <button class="btn" id="btn-json">Save game file</button>
       </div>
       <p class="${HINT}">
-        <b>Export PDF</b> opens your print dialog — choose Save as PDF (or Microsoft Print to PDF),
-        paper <b>Letter</b>, and turn margins off for an exact match.
+        An A4 PDF of the sheet${share ? ', ready to send on WhatsApp, by email or to print' : ''}. Officials sign the printed copy.
+        The game file keeps a copy you can import on any phone.
         ${d.ended ? '' : '<br>The game is not closed yet, so the final score and winner are left blank.'}
       </p>
     </div>
     <div class="card">
       <h2 class="card-title">Preview</h2>
-      <div class="preview-wrap"><div class="origin-top-left" id="preview"></div></div>
+      <div class="preview-wrap"><div id="preview"></div></div>
     </div>`;
 }
 
 function bindSheet(root) {
-  const host = $('#preview', root);
-  host.innerHTML = renderSheet(game);
-  const fit = () => {
-    const wrap = host.parentElement;
-    const sheet = host.firstElementChild;
-    if (!wrap || !sheet) return;
-    const scale = Math.min(1, (wrap.clientWidth - 20) / sheet.offsetWidth);
-    host.style.transform = `scale(${scale})`;
-    wrap.style.height = `${sheet.offsetHeight * scale + 20}px`;
+  $('#preview', root).innerHTML = renderSheet(game);
+  // Made now, so a tap on Share has the file at once: phones only allow
+  // sharing straight after a tap, not after waiting for a PDF to be built.
+  const pdf = makePdf(game);
+  pdf.catch(() => {});
+  const run = (btn, action) => async () => {
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Making PDF…';
+    try {
+      await action(await pdf);
+    } catch (e) {
+      if (e?.name !== 'AbortError') toast('Could not make the PDF');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
   };
-  fit();
-  // Stops firing once this view is replaced by another render.
-  const onResize = () => (host.isConnected ? fit() : window.removeEventListener('resize', onResize));
-  window.addEventListener('resize', onResize);
-
-  $('#btn-pdf', root).onclick = exportPdf;
+  const share = $('#btn-share', root);
+  if (share) {
+    share.onclick = run(share, (file) => navigator.share({ files: [file], title: file.name }));
+  }
+  const download = $('#btn-pdf', root);
+  download.onclick = run(download, (file) => saveFile(file, file.name));
   $('#btn-json', root).onclick = exportJson;
 }
 
-function exportPdf() {
-  const root = $('#print-root');
-  root.innerHTML = renderSheet(game);
-  const title = document.title;
-  document.title = `Scoresheet ${teamName(game, 'A')} v ${teamName(game, 'B')}`;
-  const cleanup = () => {
-    root.innerHTML = '';
-    document.title = title;
-    window.removeEventListener('afterprint', cleanup);
-  };
-  window.addEventListener('afterprint', cleanup);
-  setTimeout(() => window.print(), 60);
+const canShareFiles = () => {
+  try {
+    return Boolean(navigator.canShare?.({ files: [new File([''], 'x.pdf', { type: 'application/pdf' })] }));
+  } catch {
+    return false;
+  }
+};
+
+function saveFile(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/** e.g. Hawks-v-Lions-2026-07-18.pdf, keeping letters from any language. */
+function pdfName(g) {
+  const part = (s) => s.trim().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+  return `${[part(teamName(g, 'A')), 'v', part(teamName(g, 'B')), part(g.info.date || '')].filter(Boolean).join('-')}.pdf`;
+}
+
+// jsPDF, svg2pdf and the Figtree TTFs (jsPDF embeds TrueType only) load on the
+// first export, from the app's own files, so they also work offline.
+let pdfLibs = null;
+
+const loadScript = (src) =>
+  new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error(`Could not load ${src}`));
+    document.head.append(s);
+  });
+
+async function base64(url) {
+  const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+function loadPdfLibs() {
+  pdfLibs ??= (async () => {
+    if (!globalThis.jspdf) await loadScript('vendor/jspdf.umd.min.js');
+    if (!globalThis.svg2pdf) await loadScript('vendor/svg2pdf.umd.min.js');
+    const [regular, semibold] = await Promise.all([
+      base64('../fonts/Figtree-Regular.ttf'),
+      base64('../fonts/Figtree-SemiBold.ttf'),
+    ]);
+    return { jsPDF: globalThis.jspdf.jsPDF, regular, semibold };
+  })();
+  // A failed load (say, a broken connection on first use) is retried next time.
+  pdfLibs.catch(() => (pdfLibs = null));
+  return pdfLibs;
+}
+
+async function makePdf(g) {
+  const { jsPDF, regular, semibold } = await loadPdfLibs();
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+  doc.addFileToVFS('Figtree-Regular.ttf', regular);
+  doc.addFont('Figtree-Regular.ttf', 'Figtree', 'normal');
+  doc.addFileToVFS('Figtree-SemiBold.ttf', semibold);
+  doc.addFont('Figtree-SemiBold.ttf', 'Figtree', 'bold');
+  const name = pdfName(g);
+  doc.setProperties({ title: name.replace(/\.pdf$/, '').replaceAll('-', ' '), creator: 'Basketball Scoresheet' });
+  // svg2pdf measures the SVG, so it has to be in the document while it converts.
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:-10000px;top:0;width:210mm';
+  host.innerHTML = renderSheet(g);
+  document.body.append(host);
+  try {
+    await doc.svg(host.firstElementChild, { x: 0, y: 0, width: 210, height: 297 });
+  } finally {
+    host.remove();
+  }
+  return new File([doc.output('blob')], name, { type: 'application/pdf' });
 }
 
 function exportJson() {
   const blob = new Blob([JSON.stringify(game, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `scoresheet-${(game.info.gameNo || game.id).toString().replace(/\W+/g, '')}.json`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  saveFile(blob, `scoresheet-${(game.info.gameNo || game.id).toString().replace(/\W+/g, '')}.json`);
 }
 
 /* ------------------------------------------------------------------ games dialog */
