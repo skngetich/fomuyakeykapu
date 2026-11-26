@@ -2,7 +2,7 @@ import js from '@eslint/js';
 import globals from 'globals';
 
 export default [
-  { ignores: ['_site/', 'node_modules/', 'styles.css'] },
+  { ignores: ['_site/', 'node_modules/', 'styles.css', 'app/vendor/'] },
   js.configs.recommended,
   {
     // The app and landing page run in the browser as ES modules.

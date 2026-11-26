@@ -41,6 +41,7 @@
   <h3 class="modal-title" id="confirm-title">Check this entry</h3>
   <div class="modal-warn" id="confirm-warnings"></div>
   <p class="mt-2 text-sm text-muted" id="confirm-body"></p>
+  <div id="confirm-extra"></div>
   <div class="mt-5 flex justify-end gap-2">
     <button class="btn btn-ghost" id="confirm-cancel">Cancel</button>
     <button class="btn btn-primary" id="confirm-ok">Record anyway</button>
@@ -57,6 +58,17 @@
   <div class="mt-5 flex justify-end gap-2">
     <button class="btn btn-ghost" id="foul-cancel">Cancel</button>
     <button class="btn btn-primary" id="foul-ok">Record</button>
+  </div>
+</dialog>
+
+<!-- Time-out: the minute of play, as the paper form records it -->
+<dialog id="dlg-timeout" class="modal">
+  <h3 class="modal-title" id="timeout-title">Time-out</h3>
+  <p class="text-sm text-muted">Minute of the period</p>
+  <div class="my-2 grid grid-cols-5 gap-2" id="timeout-minutes"></div>
+  <div class="mt-5 flex justify-end gap-2">
+    <button class="btn btn-ghost" id="timeout-cancel">Cancel</button>
+    <button class="btn" id="timeout-skip">Record without minute</button>
   </div>
 </dialog>
 
@@ -91,14 +103,14 @@
       <li><b>+1</b> a made free throw, <b>+2</b> / <b>+3</b> a field goal</li>
       <li><b>F</b> a foul: choose the type and the free throws awarded</li>
     </ul>
-    <p>Time-outs and coach or bench fouls are under the player cards.</p>
+    <p>Time-outs and coach or bench fouls are under the player cards. For a time-out, tap the minute of the period on the scoreboard clock.</p>
     <h4>3. Fix mistakes</h4>
     <p><b>Undo</b> removes the last entry. <b>Log</b> lists every entry: tap the cross beside one to delete it, then <b>Undo</b> in the message if that was a slip.</p>
     <p>If something breaks a rule, the app asks first. You can always record it anyway: the sheet records what actually happened.</p>
     <h4>4. Periods and the end</h4>
-    <p>Tap <b>End Q1</b> (and so on) when each period ends, and <b>End game</b> at the final buzzer.</p>
+    <p>Tap <b>End Q1</b> (and so on) when each period ends, and <b>End game</b> at the final buzzer. If a team is playing under protest, note it there.</p>
     <h4>5. Export</h4>
-    <p>On <b>Sheet</b>, export the PDF. <b>Save JSON</b> keeps a copy of the game you can import on any phone.</p>
+    <p>On <b>Sheet</b>, share the A4 PDF straight to WhatsApp or email, or download it. Officials sign the printed copy. <b>Save game file</b> keeps a copy you can import on any phone.</p>
     <h4>Your games stay on this phone</h4>
     <p>Nothing is uploaded. Clearing the browser's data deletes saved games, so export anything you need to keep.</p>
     <p><b>Install it</b> so it opens like an app and works with no signal:</p>
@@ -114,9 +126,6 @@
 </dialog>
 
 <input type="file" id="file-import" accept="application/json,.json" class="hidden">
-
-<!-- The printable scoresheet is rendered here on demand -->
-<div id="print-root" aria-hidden="true"></div>
 
 <script type="module" src="app.js"></script>
 </body>
