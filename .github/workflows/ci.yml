@@ -22,13 +22,16 @@ jobs:
 
       - run: npm ci
 
-      - name: Scoring and foul rules
+      - name: Scoring, foul and sheet rules
         run: npm test
+
+      - name: Lint
+        run: npm run lint
 
       - name: Rebuild the stylesheet
         run: npm run build:css
 
-      # styles.css is committed so the site deploys without a build. If it no
+      # styles.css is committed so the source tree runs without a build. If it no
       # longer matches src/input.css, someone edited the input and forgot to
       # rebuild, and the deployed styles would silently lag behind.
       - name: Check styles.css is up to date
@@ -39,22 +42,70 @@ jobs:
             exit 1
           fi
 
-      - name: Check the app shell is cacheable
+      # Fails if any file app/sw.js promises to precache is missing: that would
+      # make the service worker install reject and the app stop working offline.
+      - name: Build the site
+        run: npm run build:site
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: _site
+          include-hidden-files: true
+
+  # Production from main; a preview per pull request, linked in a PR comment.
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+      pull-requests: write
+    concurrency:
+      group: deploy-${{ github.head_ref || github.ref_name }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PROJECT: ${{ vars.CLOUDFLARE_PROJECT || 'basketball-scoresheet' }}
+    steps:
+      # Pull requests from forks get no secrets. Skip with an explanation rather
+      # than failing on a repository that has not been set up.
+      - name: Check for the deploy credentials
+        id: cred
         run: |
-          # Every file sw.js promises to precache must actually exist, or the
-          # service worker install rejects and the app stops working offline.
-          node --input-type=module -e "
-            import { readFile, access } from 'node:fs/promises';
-            const src = await readFile('sw.js', 'utf8');
-            const list = src.match(/const ASSETS = \[([\s\S]*?)\];/)[1];
-            const files = [...list.matchAll(/'([^']+)'/g)].map((m) => m[1]).filter((f) => f !== './');
-            const missing = [];
-            for (const f of files) {
-              try { await access(f); } catch { missing.push(f); }
-            }
-            if (missing.length) {
-              console.error('Precached but missing from the repo: ' + missing.join(', '));
-              process.exit(1);
-            }
-            console.log('All ' + files.length + ' precached assets present.');
-          "
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is not set, so the deploy was skipped. See the README."
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/download-artifact@v4
+        if: steps.cred.outputs.present == 'true'
+        with:
+          name: site
+          path: _site
+
+      - name: Deploy to Cloudflare Pages
+        id: deploy
+        if: steps.cred.outputs.present == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy _site --project-name=${{ env.PROJECT }} --branch=${{ github.head_ref || github.ref_name }} --commit-dirty=true
+
+      - name: Report the address
+        if: steps.cred.outputs.present == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URL: ${{ steps.deploy.outputs.pages-deployment-alias-url || steps.deploy.outputs.deployment-url }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          echo "Deployed to $URL" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$PR" ]; then
+            body="Preview for this pull request: $URL/app/ (landing page: $URL)"
+            gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --edit-last --body "$body" \
+              || gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "$body"
+          fi
