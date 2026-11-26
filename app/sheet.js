@@ -1,4 +1,5 @@
-// Renders the game as an HTML replica of the FIBA scoresheet (US Letter portrait).
+// Renders the game as an HTML scoresheet laid out like the FIBA form (US Letter portrait).
+// The heading is the league's own (tournament or federation): the app is not FIBA's.
 // The same markup is used for on-screen preview and for print / save-as-PDF.
 //
 // FIBA running-score marking conventions used here:
@@ -148,7 +149,7 @@ export function renderSheet(game) {
   const o = game.officials;
   return `<div class="sheet">
   <header class="sheet-head">
-    <div class="fed">FEDERATION INTERNATIONALE DE BASKETBALL<br>INTERNATIONAL BASKETBALL FEDERATION</div>
+    ${i.heading.trim() ? `<div class="fed">${esc(i.heading)}</div>` : ''}
     <h1>SCORESHEET</h1>
   </header>
   <div class="meta">

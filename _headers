@@ -1,0 +1,25 @@
+# Cloudflare Pages response headers. Rules match by path; every matching rule applies.
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: same-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# Nothing is content-hashed, so the browser must revalidate the pages and code.
+# Offline still works: the service worker answers from its own cache. sw.js in
+# particular decides when every other file updates, so it is never served stale.
+/*.html
+  Cache-Control: no-cache
+/*.js
+  Cache-Control: no-cache
+/*.css
+  Cache-Control: no-cache
+/app/*
+  Cache-Control: no-cache
+
+# Icons change only when the app is rebranded; the video when it is re-recorded.
+/icons/*
+  Cache-Control: public, max-age=604800
+/media/*
+  Cache-Control: public, max-age=86400
