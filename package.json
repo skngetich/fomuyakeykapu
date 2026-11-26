@@ -15,14 +15,18 @@
     "build": "npm run build:css && npm run build:site",
     "serve:site": "npm run build && python -m http.server 5174 -d _site",
     "lint": "eslint .",
-    "video": "node scripts/record-video.mjs"
+    "video": "node scripts/record-video.mjs",
+    "vendor": "node scripts/vendor.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@expo-google-fonts/figtree": "^0.4.1",
     "@tailwindcss/cli": "^4.3.3",
     "eslint": "^10.15.0",
     "globals": "^17.14.0",
+    "jspdf": "^4.2.1",
     "playwright": "^1.65.1",
+    "svg2pdf.js": "^2.9.0",
     "tailwindcss": "^4.3.3"
   }
 }

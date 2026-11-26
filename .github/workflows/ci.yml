@@ -42,6 +42,17 @@ jobs:
             exit 1
           fi
 
+      # jsPDF, svg2pdf.js and the Figtree TTFs are committed so the source tree
+      # runs as-is. They must be exactly the versions package-lock.json pins.
+      - name: Check vendored files match the installed packages
+        run: |
+          npm run vendor
+          if ! git diff --quiet -- app/vendor fonts; then
+            echo "::error::app/vendor or fonts differ from node_modules. Run 'npm run vendor' and commit the result."
+            git diff --stat -- app/vendor fonts
+            exit 1
+          fi
+
       # Fails if any file app/sw.js promises to precache is missing: that would
       # make the service worker install reject and the app stop working offline.
       - name: Build the site
